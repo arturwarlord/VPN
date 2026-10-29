@@ -24,7 +24,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 The VPN service is **not live yet**. No server has been provisioned or deployed. The country websites see is determined by the remote server's network location, not by a label in the app.
 
-Latest repository validation (including all 24 endpoint tests): [GitHub Actions CI run](https://github.com/arturwarlord/VPN/actions/runs/40953256746).
+Latest repository validation (including all 24 endpoint tests): [GitHub Actions CI run](https://github.com/arturwarlord/VPN/actions/runs/40953439683).
 
 ## Android client
 
@@ -106,6 +106,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `docs/IOS_CLIENT.md` — iOS client notes.
 - `docs/SERVER_DEPLOYMENT.md` — deployment requirements and SSH pinning.
 - `docs/FREE_HOST_RESEARCH.md` — free-server candidates reviewed and reasons none is approved yet.
+- `docs/CLIENT_SMOKE_TEST.md` — safe temporary third-party WireGuard profile test before our own server exists.
 - `scripts/setup-wireguard.sh` — server bootstrap script.
 - `.github/workflows/android-client.yml` — Android debug APK build.
 - `.github/workflows/windows-client.yml` — Windows package build.
