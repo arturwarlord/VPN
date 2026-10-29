@@ -43,7 +43,7 @@ Before SSH deployment, the workflow queries the free HTTPS geolocation endpoint 
 
 The installer:
 - Refuses to proceed without a valid explicit public IPv4 endpoint and valid port.
-- Refuses to overwrite an existing `/etc/wireguard/wg0.conf` unless it carries the FreeRoute managed marker.
+- Refuses to overwrite an existing `/etc/wireguard/wg0.conf` unless it carries the FreeRoute managed marker and contains exactly the three managed `windows`, `android` and `iphone` peers. It refuses to replace a managed config containing custom peers.
 - Generates the WireGuard server key and client keys on the server.
 - Stores client profiles in `/root/wireguard-clients/` with mode 600.
 - Writes the candidate configuration atomically, backs up an existing FreeRoute-managed config before replacement, and attempts to restore the backup if WireGuard fails to start.
