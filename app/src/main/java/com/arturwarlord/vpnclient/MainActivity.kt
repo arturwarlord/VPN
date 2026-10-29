@@ -1,6 +1,7 @@
 package com.arturwarlord.vpnclient
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.database.Cursor
 import android.graphics.Color
@@ -21,6 +22,7 @@ import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.net.Inet6Address
 
 class MainActivity : Activity() {
     private val pickProfileRequest = 4101
@@ -194,9 +196,9 @@ class MainActivity : Activity() {
         profile = selected?.config
         if (selected != null) {
             prefs.edit().putString("active_profile", selected.fileName).apply()
-            profileView.text = "Сохранён локально: ${selected.label}"
+            profileView.text = describeProfile(selected)
         } else {
-            profileView.text = "Добавь WireGuard .conf профиль сервера"
+            profileView.text = describeProfile(null)
             prefs.edit().remove("active_profile").apply()
         }
 
@@ -212,7 +214,7 @@ class MainActivity : Activity() {
                 selectedProfileFileName = entry.fileName
                 profile = entry.config
                 prefs.edit().putString("active_profile", entry.fileName).apply()
-                profileView.text = "Сохранён локально: ${entry.label}"
+                profileView.text = describeProfile(entry)
                 renderState("Готов к подключению")
             }
 
@@ -220,6 +222,23 @@ class MainActivity : Activity() {
         }
 
         renderState(if (profile != null) "Готов к подключению" else "Ожидает профиль")
+    }
+
+    private fun profileIncludesIpv6DefaultRoute(config: Config): Boolean =
+        config.peers.any { peer ->
+            peer.allowedIps.any { network ->
+                network.address is Inet6Address && network.mask == 0
+            }
+        }
+
+    private fun describeProfile(entry: SavedProfile?): String {
+        if (entry == null) return "Добавь WireGuard .conf профиль сервера"
+        val base = "Профиль: " + entry.label
+        return if (profileIncludesIpv6DefaultRoute(entry.config)) {
+            base + " · IPv6-маршрут есть (сервер всё равно нужно проверить)"
+        } else {
+            base + " · ⚠ IPv6 не включён — возможна утечка"
+        }
     }
 
     private fun profilesDirectory(): File =
@@ -284,6 +303,22 @@ class MainActivity : Activity() {
         }
         if (isBusy || isConnected) return
 
+        val chosenProfile = profile ?: return
+        if (!profileIncludesIpv6DefaultRoute(chosenProfile)) {
+            AlertDialog.Builder(this)
+                .setTitle("Возможна утечка IPv6")
+                .setMessage(
+                    "Этот профиль не направляет IPv6-трафик через VPN. Некоторые сайты могут увидеть исходное подключение и его страну. Можно отменить подключение или продолжить с этим риском. Даже при наличии маршрута IPv6 его работу нужно проверять на сервере."
+                )
+                .setNegativeButton("Отмена", null)
+                .setPositiveButton("Продолжить") { _, _ -> requestVpnPermissionAndStart() }
+                .show()
+            return
+        }
+        requestVpnPermissionAndStart()
+    }
+
+    private fun requestVpnPermissionAndStart() {
         val consent = VpnService.prepare(this)
         if (consent != null) {
             @Suppress("DEPRECATION")
