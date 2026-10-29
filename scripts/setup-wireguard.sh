@@ -32,7 +32,10 @@ validate_inputs() {
   if (( a == 192 && b == 168 )); then
     fail "WG_ENDPOINT cannot use a private IPv4 address."
   fi
-  if (( a == 192 && b == 0 && c == 2 )) || (( a == 198 && b == 51 && c == 100 )) || (( a == 203 && b == 0 && c == 113 )); then
+  if (( a == 192 && b == 0 && c == 0 )) || (( a == 192 && b == 0 && c == 2 )) || (( a == 192 && b == 88 && c == 99 )); then
+    fail "WG_ENDPOINT cannot use a special-purpose or deprecated IPv4 range."
+  fi
+  if (( a == 198 && b == 51 && c == 100 )) || (( a == 203 && b == 0 && c == 113 )); then
     fail "WG_ENDPOINT cannot use a documentation-only IPv4 address."
   fi
   if (( a == 198 && (b == 18 || b == 19) )); then
