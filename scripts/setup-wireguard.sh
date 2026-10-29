@@ -86,6 +86,7 @@ fi
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y wireguard wireguard-tools iptables iproute2
+command -v ip6tables >/dev/null || fail "ip6tables is required to block IPv6 forwarding from VPN clients."
 
 WAN_IF="$(ip -4 route show default | awk 'NR==1 {print $5}')"
 [[ -n "$WAN_IF" ]] || fail "Cannot detect default network interface."
@@ -106,12 +107,12 @@ trap 'if [[ -n "${CONFIG_TMP:-}" ]]; then rm -f "$CONFIG_TMP"; fi' EXIT
 cat > "$CONFIG_TMP" <<EOF
 # FreeRoute managed WireGuard configuration
 [Interface]
-Address = 10.77.0.1/24
+Address = 10.77.0.1/24, fd4b:8d2c:6a91::1/64
 ListenPort = ${PORT}
 PrivateKey = ${SERVER_PRIVATE}
 SaveConfig = false
-PostUp = iptables -t nat -C POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE; if iptables -S FREEROUTE_FORWARD >/dev/null 2>&1; then iptables -S FREEROUTE_FORWARD | grep -Fq 'freeroute-managed' || { echo "Refusing to flush an unrecognized FREEROUTE_FORWARD chain." >&2; exit 1; }; iptables -F FREEROUTE_FORWARD; else iptables -N FREEROUTE_FORWARD; fi; iptables -A FREEROUTE_FORWARD -i ${WAN_IF} -o wg0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT; iptables -A FREEROUTE_FORWARD -o wg0 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 0.0.0.0/8 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 10.0.0.0/8 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 100.64.0.0/10 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 127.0.0.0/8 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 169.254.0.0/16 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 172.16.0.0/12 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 192.0.0.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 192.0.2.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 192.88.99.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 192.168.0.0/16 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 198.18.0.0/15 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 198.51.100.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 203.0.113.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 224.0.0.0/4 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 240.0.0.0/4 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -o ${WAN_IF} -j ACCEPT; iptables -A FREEROUTE_FORWARD -i wg0 ! -o ${WAN_IF} -j DROP; iptables -A FREEROUTE_FORWARD -m comment --comment freeroute-managed -j RETURN; while iptables -C FORWARD -j FREEROUTE_FORWARD 2>/dev/null; do iptables -D FORWARD -j FREEROUTE_FORWARD; done; iptables -I FORWARD 1 -j FREEROUTE_FORWARD; while iptables -C INPUT -i wg0 -j DROP 2>/dev/null; do iptables -D INPUT -i wg0 -j DROP; done; iptables -I INPUT 1 -i wg0 -j DROP
-PostDown = while iptables -C INPUT -i wg0 -j DROP 2>/dev/null; do iptables -D INPUT -i wg0 -j DROP; done; while iptables -C FORWARD -j FREEROUTE_FORWARD 2>/dev/null; do iptables -D FORWARD -j FREEROUTE_FORWARD; done; iptables -F FREEROUTE_FORWARD 2>/dev/null || true; iptables -X FREEROUTE_FORWARD 2>/dev/null || true; iptables -t nat -D POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE 2>/dev/null || true
+PostUp = iptables -t nat -C POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE; if iptables -S FREEROUTE_FORWARD >/dev/null 2>&1; then iptables -S FREEROUTE_FORWARD | grep -Fq 'freeroute-managed' || { echo "Refusing to flush an unrecognized FREEROUTE_FORWARD chain." >&2; exit 1; }; iptables -F FREEROUTE_FORWARD; else iptables -N FREEROUTE_FORWARD; fi; iptables -A FREEROUTE_FORWARD -i ${WAN_IF} -o wg0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT; iptables -A FREEROUTE_FORWARD -o wg0 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 0.0.0.0/8 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 10.0.0.0/8 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 100.64.0.0/10 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 127.0.0.0/8 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 169.254.0.0/16 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 172.16.0.0/12 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 192.0.0.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 192.0.2.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 192.88.99.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 192.168.0.0/16 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 198.18.0.0/15 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 198.51.100.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 203.0.113.0/24 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 224.0.0.0/4 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -d 240.0.0.0/4 -j DROP; iptables -A FREEROUTE_FORWARD -i wg0 -o ${WAN_IF} -j ACCEPT; iptables -A FREEROUTE_FORWARD -i wg0 ! -o ${WAN_IF} -j DROP; iptables -A FREEROUTE_FORWARD -m comment --comment freeroute-managed -j RETURN; while iptables -C FORWARD -j FREEROUTE_FORWARD 2>/dev/null; do iptables -D FORWARD -j FREEROUTE_FORWARD; done; iptables -I FORWARD 1 -j FREEROUTE_FORWARD; while iptables -C INPUT -i wg0 -j DROP 2>/dev/null; do iptables -D INPUT -i wg0 -j DROP; done; iptables -I INPUT 1 -i wg0 -j DROP; while ip6tables -C FORWARD -i wg0 -j DROP 2>/dev/null; do ip6tables -D FORWARD -i wg0 -j DROP; done; ip6tables -I FORWARD 1 -i wg0 -j DROP; while ip6tables -C INPUT -i wg0 -j DROP 2>/dev/null; do ip6tables -D INPUT -i wg0 -j DROP; done; ip6tables -I INPUT 1 -i wg0 -j DROP
+PostDown = while iptables -C INPUT -i wg0 -j DROP 2>/dev/null; do iptables -D INPUT -i wg0 -j DROP; done; while ip6tables -C INPUT -i wg0 -j DROP 2>/dev/null; do ip6tables -D INPUT -i wg0 -j DROP; done; while ip6tables -C FORWARD -i wg0 -j DROP 2>/dev/null; do ip6tables -D FORWARD -i wg0 -j DROP; done; while iptables -C FORWARD -j FREEROUTE_FORWARD 2>/dev/null; do iptables -D FORWARD -j FREEROUTE_FORWARD; done; iptables -F FREEROUTE_FORWARD 2>/dev/null || true; iptables -X FREEROUTE_FORWARD 2>/dev/null || true; iptables -t nat -D POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE 2>/dev/null || true
 EOF
 
 # Generate separate device keys on the VPS. Private profiles never enter GitHub.
@@ -134,7 +135,7 @@ for spec in "windows:2" "android:3" "iphone:4"; do
 [Peer]
 # ${name}
 PublicKey = ${client_public}
-AllowedIPs = 10.77.0.${octet}/32
+AllowedIPs = 10.77.0.${octet}/32, fd4b:8d2c:6a91::${octet}/128
 EOF
 
   client_tmp="$(mktemp "/root/wireguard-clients/${name}.conf.XXXXXX")"
@@ -142,13 +143,13 @@ EOF
   cat > "$client_tmp" <<EOF
 [Interface]
 PrivateKey = ${client_private}
-Address = 10.77.0.${octet}/32
+Address = 10.77.0.${octet}/32, fd4b:8d2c:6a91::${octet}/128
 DNS = 1.1.1.1
 
 [Peer]
 PublicKey = ${SERVER_PUBLIC}
 Endpoint = ${WG_ENDPOINT}:${PORT}
-AllowedIPs = 0.0.0.0/0
+AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 EOF
   mv -f "$client_tmp" "/root/wireguard-clients/${name}.conf"
@@ -195,4 +196,4 @@ echo "WireGuard configured and service is active."
 echo "Client profiles were generated on the VPS under /root/wireguard-clients (mode 600); they were not printed or uploaded."
 echo "Server public key: ${SERVER_PUBLIC}"
 echo "Public endpoint: ${WG_ENDPOINT}:${PORT}/udp"
-echo "Note: this setup tunnels IPv4 only. IPv6 is not routed through the tunnel yet, so client devices must treat IPv6 leak prevention as unfinished."
+echo "IPv6 policy: client IPv6 is routed into WireGuard and explicitly blocked at the server; IPv6 internet access remains unavailable until native IPv6 egress is implemented and tested."
