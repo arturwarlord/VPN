@@ -49,7 +49,7 @@ Official references:
 
 The provider currently advertises a $0 VPS-Mini with 1 CPU, 2 GB RAM, 6 GB storage, root SSH access, a public IPv6 address, and 20 ports (one reserved for SSH). Free capacity is limited, and the account needs a GitHub account at least 30 days old. The dashboard requires renewal; a stopped instance is deleted after three days if not renewed.
 
-The important gap is network compatibility: the published summary does not clearly confirm that an inbound UDP port can be reached over IPv4, while the current FreeRoute deployment workflow accepts only a public IPv4 endpoint. An IPv6-only server would require a separate, audited IPv6-endpoint deployment path and testing from all target networks. Do not provision or send traffic to it yet; first establish the exact UDP port-forwarding behavior, acceptable-use terms for a private personal WireGuard server, and reliable no-cost renewal.
+The important gap remains network compatibility: the published summary does not clearly confirm that an inbound UDP port can be reached over IPv4, and a public IPv6 endpoint is not proof of a working IPv4 internet exit. FreeRoute now validates public IPv6 literals for the outer WireGuard endpoint, but the server still requires working IPv4 routing/NAT for IPv4 websites. Before treating this host as viable, verify the exact UDP forwarding behavior, IPv4 egress, acceptable-use terms for a private personal WireGuard server, and reliable no-cost renewal.
 
 Official reference: https://vyce.cloud/
 
@@ -64,7 +64,7 @@ Official reference: https://alavps.com/ (FAQ and pricing sections)
 The official free plan advertises a KVM VPS with root access, 1 shared vCPU, 1 GB RAM, 15 GB NVMe, 250 GB/month, an IPv6 /64 and 20 NAT IPv4 forwarded ports. The provider explicitly describes a personal VPN over IPv6 as a possible use, but says public proxies are not allowed. Eligibility requires current student verification, and the server must be manually kept alive once every 30 days; otherwise it pauses after a further grace period.
 
 This is the most relevant newly found candidate for a **short controlled prototype** if the account qualifies: a WireGuard endpoint might be reachable over native IPv6, and the forwarded IPv4 ports may be useful for client networks. However:
-- The current FreeRoute deploy workflow accepts only global IPv4 endpoints; it does not support an IPv6 endpoint yet.
+- FreeRoute now supports a globally routable IPv6 address as the outer WireGuard endpoint. This does not provide inner IPv6 internet egress; the VPS still needs a working IPv4 default route/NAT, the forwarded UDP port must be reachable, and country geolocation must be verified.
 - The exact forwarded-port protocol options and IPv4 egress behavior still need verification before relying on it.
 - The 30-day manual keep-alive means it is not a fully unattended always-on endpoint.
 - Student eligibility is not assumed. Do not create an account or send profile/private-key material until eligibility, allowed personal VPN use, and actual UDP reachability are confirmed.
