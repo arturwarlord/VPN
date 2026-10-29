@@ -1,0 +1,121 @@
+name: Publish FreeRoute release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, for example 0.1.0 (without leading v)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark this as a pre-release while FreeRoute is still in testing"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/android-client.yml
+  windows:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/windows-client.yml
+  ios:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ios-client.yml
+
+  publish:
+    name: Attach builds and publish release
+    needs: [android, windows, ios]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Validate version and release source
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]] || {
+            echo "Run this workflow from the main branch only." >&2
+            exit 1
+          }
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || {
+            echo "Version must look like 0.1.0 or 0.1.0-rc.1 (without leading v)." >&2
+            exit 1
+          }
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists. Choose a new version." >&2
+            exit 1
+          fi
+          echo "Preparing FreeRoute v$VERSION from commit $GITHUB_SHA."
+
+      - name: Download Android build
+        uses: actions/download-artifact@v4
+        with:
+          name: freeroute-android-debug
+          path: builds/android
+
+      - name: Download Windows package
+        uses: actions/download-artifact@v4
+        with:
+          name: freeroute-windows-x64
+          path: builds/windows
+
+      - name: Download unsigned iOS package
+        uses: actions/download-artifact@v4
+        with:
+          name: freeroute-ios-unsigned
+          path: builds/ios
+
+      - name: Assemble versioned release assets and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          test -s builds/android/app-debug.apk
+          test -s builds/windows/freeroute-windows-x64.zip
+          test -s builds/ios/freeroute-ios-unsigned.zip
+          cp builds/android/app-debug.apk release-assets/freeroute-android-debug.apk
+          cp builds/windows/freeroute-windows-x64.zip release-assets/freeroute-windows-x64.zip
+          cp builds/ios/freeroute-ios-unsigned.zip release-assets/freeroute-ios-unsigned.zip
+          (cd release-assets && sha256sum freeroute-android-debug.apk freeroute-windows-x64.zip freeroute-ios-unsigned.zip > SHA256SUMS.txt)
+          echo "Release assets assembled:"
+          ls -lh release-assets
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          notes="$RUNNER_TEMP/freeroute-release-notes.md"
+          cat > "$notes" <<'NOTES'
+          ## FreeRoute test release
+
+          This release contains builds compiled by GitHub Actions from one source commit.
+
+          - **Android:** debug APK for testing; not a production-signed release.
+          - **Windows:** x64 ZIP test package; administrator permission is required to manage the VPN tunnel.
+          - **iPhone:** unsigned app package for inspection only. It cannot be installed as a working VPN without Apple signing, provisioning, App Group and Network Extension entitlement setup.
+
+          **Important:** FreeRoute does not yet have a confirmed live VPN server. These builds do not guarantee a working tunnel, country switching, or leak protection. Do not rely on them for sensitive traffic.
+
+          `SHA256SUMS.txt` contains SHA-256 checksums for all three packages.
+          NOTES
+          if [[ "${PRERELEASE,,}" == "true" ]]; then
+            gh release create "$tag" release-assets/* --target "$GITHUB_SHA" --title "FreeRoute $tag" --notes-file "$notes" --prerelease
+          else
+            gh release create "$tag" release-assets/* --target "$GITHUB_SHA" --title "FreeRoute $tag" --notes-file "$notes"
+          fi
