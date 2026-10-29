@@ -23,8 +23,10 @@ jobs:
           bash -n scripts/diagnose-wireguard-server.sh
           bash -n scripts/check-workflow-shell.sh
           bash -n tests/validate-endpoint.sh
+          bash -n tests/validate-firewall-policy.sh
           bash scripts/check-workflow-shell.sh
           bash tests/validate-endpoint.sh
+          bash tests/validate-firewall-policy.sh
 
       - name: Check required project files and build settings
         shell: bash
@@ -51,6 +53,7 @@ jobs:
           grep -q 'host-access block' scripts/diagnose-wireguard-server.sh
           test -s scripts/check-workflow-shell.sh
           test -s tests/validate-endpoint.sh
+          test -s tests/validate-firewall-policy.sh
           test -s settings.gradle.kts
           test -s gradle.properties
           grep -q '^android.useAndroidX=true$' gradle.properties
