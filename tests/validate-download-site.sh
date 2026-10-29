@@ -67,6 +67,10 @@ for required in (
     "gh release create",
     '[[ "$GITHUB_REF" == "refs/heads/main" ]]',
     "uses: actions/checkout@v4",
+    '"release/v*"',
+    'GITHUB_REF_NAME#release/v',
+    'echo "version=$version" >> "$GITHUB_OUTPUT"',
+    'echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"',
 ):
     assert required in workflow, f"Release workflow is missing required behavior: {required}"
 assert workflow.index("uses: actions/checkout@v4") < workflow.index('git ls-remote --exit-code --tags origin'), (
