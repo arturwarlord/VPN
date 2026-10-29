@@ -2,15 +2,18 @@ package com.arturwarlord.vpnclient
 
 import android.app.Activity
 import android.content.Intent
+import android.database.Cursor
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.VpnService
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.view.Gravity
-import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import com.wireguard.android.backend.GoBackend
@@ -24,19 +27,32 @@ class MainActivity : Activity() {
     private val vpnConsentRequest = 4102
     private var backend: GoBackend? = null
     private var profile: Config? = null
-    private var isWorking = false
+    private var isConnected = false
+    private var isBusy = false
+    private var selectedProfileFileName: String? = null
+    private val savedProfiles = mutableListOf<SavedProfile>()
+
     private lateinit var statusView: TextView
     private lateinit var profileView: TextView
+    private lateinit var profileSpinner: Spinner
+    private lateinit var importButton: Button
     private lateinit var connectButton: Button
     private lateinit var disconnectButton: Button
+
+    private data class SavedProfile(
+        val fileName: String,
+        val label: String,
+        val config: Config
+    )
 
     private val tunnel = object : Tunnel {
         override fun getName(): String = "freeroute"
 
         override fun onStateChange(newState: Tunnel.State) {
             runOnUiThread {
-                isWorking = newState == Tunnel.State.UP
-                renderState(if (isWorking) "VPN подключён" else "VPN отключён")
+                isConnected = newState == Tunnel.State.UP
+                isBusy = false
+                renderState(if (isConnected) "VPN подключён" else "VPN отключён")
             }
         }
     }
@@ -47,7 +63,7 @@ class MainActivity : Activity() {
         window.navigationBarColor = Color.rgb(11, 16, 32)
         backend = GoBackend(applicationContext)
         buildUi()
-        loadSavedProfile()
+        loadSavedProfiles()
     }
 
     private fun buildUi() {
@@ -72,12 +88,12 @@ class MainActivity : Activity() {
             textSize = 15f
             setTextColor(Color.rgb(170, 184, 210))
             gravity = Gravity.CENTER
-            setPadding(0, dp(8), 0, dp(30))
+            setPadding(0, dp(8), 0, dp(26))
         }
         root.addView(subtitle, matchWidthWrapHeight())
 
         statusView = TextView(this).apply {
-            text = "Профиль не подключён"
+            text = "Ожидает настройки"
             textSize = 20f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
@@ -88,15 +104,31 @@ class MainActivity : Activity() {
         root.addView(statusView, matchWidthWrapHeight())
 
         profileView = TextView(this).apply {
-            text = "Сначала импортируй VPN-профиль"
+            text = "Импортируй профиль сервера, чтобы начать"
             textSize = 14f
             setTextColor(Color.rgb(170, 184, 210))
             gravity = Gravity.CENTER
-            setPadding(dp(4), dp(20), dp(4), dp(20))
+            setPadding(dp(4), dp(12), dp(4), dp(8))
         }
         root.addView(profileView, matchWidthWrapHeight())
 
-        val importButton = makeButton("Импортировать профиль", Color.rgb(47, 88, 158))
+        val profileLabel = TextView(this).apply {
+            text = "ВЫБРАННЫЙ ПРОФИЛЬ / СЕРВЕР"
+            textSize = 11f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.rgb(140, 153, 177))
+            setPadding(0, dp(8), 0, dp(4))
+        }
+        root.addView(profileLabel, matchWidthWrapHeight())
+
+        profileSpinner = Spinner(this).apply {
+            minimumHeight = dp(48)
+            background = rounded(Color.rgb(24, 34, 55), 12)
+            setPadding(dp(12), 0, dp(12), 0)
+        }
+        root.addView(profileSpinner, matchWidthWrapHeight())
+
+        importButton = makeButton("Добавить профиль", Color.rgb(47, 88, 158))
         importButton.setOnClickListener {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
@@ -116,31 +148,110 @@ class MainActivity : Activity() {
         root.addView(disconnectButton, buttonLayout())
 
         val note = TextView(this).apply {
-            text = "Профиль хранится только во внутренней памяти приложения. Не отправляй файл конфигурации другим людям: он содержит приватный ключ."
+            text = "Каждый профиль хранится только на этом устройстве. Имя профиля можно использовать для обозначения страны, но фактическая страна выхода определяется удалённым сервером."
             textSize = 12f
             setTextColor(Color.rgb(140, 153, 177))
             gravity = Gravity.CENTER
-            setPadding(0, dp(24), 0, 0)
+            setPadding(0, dp(20), 0, 0)
         }
         root.addView(note, matchWidthWrapHeight())
         setContentView(root)
     }
 
-    private fun loadSavedProfile() {
-        val file = File(filesDir, "active-profile.conf")
-        if (!file.isFile) {
-            renderState("Ожидает настройки")
-            return
+    private fun loadSavedProfiles(preferredFileName: String? = null) {
+        val directory = profilesDirectory()
+        savedProfiles.clear()
+        directory.listFiles()
+            ?.filter { it.isFile && it.extension.equals("conf", ignoreCase = true) }
+            ?.sortedBy { it.name.lowercase() }
+            ?.forEach { file ->
+                try {
+                    val parsed = file.inputStream().use { Config.parse(it) }
+                    val label = file.nameWithoutExtension.replace('_', ' ')
+                    savedProfiles.add(SavedProfile(file.name, label, parsed))
+                } catch (_: Exception) {
+                    // Ignore invalid profile files; imports are validated before saving.
+                }
+            }
+
+        val prefs = getSharedPreferences("freeroute_settings", MODE_PRIVATE)
+        val wantedFileName = preferredFileName ?: prefs.getString("active_profile", null)
+        val selectedIndex = savedProfiles.indexOfFirst { it.fileName == wantedFileName }
+            .let { if (it >= 0) it else 0 }
+
+        profileSpinner.onItemSelectedListener = null
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            savedProfiles.map { it.label }.ifEmpty { listOf("Нет импортированных профилей") }
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        profileSpinner.adapter = adapter
+        profileSpinner.setSelection(selectedIndex, false)
+
+        val selected = savedProfiles.getOrNull(selectedIndex)
+        selectedProfileFileName = selected?.fileName
+        profile = selected?.config
+        if (selected != null) {
+            prefs.edit().putString("active_profile", selected.fileName).apply()
+            profileView.text = "Сохранён локально: ${selected.label}"
+        } else {
+            profileView.text = "Добавь WireGuard .conf профиль сервера"
+            prefs.edit().remove("active_profile").apply()
         }
-        try {
-            profile = parseConfig(file.readBytes())
-            profileView.text = "Профиль загружен: сохранён локально"
-            renderState("Готов к подключению")
-        } catch (error: Exception) {
-            profile = null
-            profileView.text = "Сохранённый профиль не удалось прочитать. Импортируй его заново."
-            renderState("Нужен новый профиль")
+
+        profileSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: android.widget.AdapterView<*>?,
+                view: android.view.View?,
+                position: Int,
+                id: Long
+            ) {
+                val entry = savedProfiles.getOrNull(position) ?: return
+                if (isConnected || isBusy) return
+                selectedProfileFileName = entry.fileName
+                profile = entry.config
+                prefs.edit().putString("active_profile", entry.fileName).apply()
+                profileView.text = "Сохранён локально: ${entry.label}"
+                renderState("Готов к подключению")
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
         }
+
+        renderState(if (profile != null) "Готов к подключению" else "Ожидает профиль")
+    }
+
+    private fun profilesDirectory(): File =
+        File(filesDir, "profiles").apply { mkdirs() }
+
+    private fun displayNameFor(uri: android.net.Uri): String {
+        val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
+        contentResolver.query(uri, projection, null, null, null)?.use { cursor: Cursor ->
+            val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (cursor.moveToFirst() && column >= 0) {
+                cursor.getString(column)?.let { return it }
+            }
+        }
+        return "profile-${System.currentTimeMillis()}.conf"
+    }
+
+    private fun uniqueProfileFile(displayName: String): File {
+        val originalBase = displayName.substringAfterLast('/').substringBeforeLast('.', displayName)
+        val safeBase = originalBase
+            .replace(Regex("[^A-Za-z0-9._-]"), "_")
+            .trim('.', '_', '-')
+            .take(48)
+            .ifBlank { "profile" }
+
+        val directory = profilesDirectory()
+        var candidate = File(directory, "${safeBase}.conf")
+        var suffix = 2
+        while (candidate.exists()) {
+            candidate = File(directory, "${safeBase}-${suffix}.conf")
+            suffix++
+        }
+        return candidate
     }
 
     @Suppress("DEPRECATION")
@@ -151,17 +262,13 @@ class MainActivity : Activity() {
             try {
                 val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     ?: throw IllegalArgumentException("Не удалось прочитать файл.")
-                val parsed = parseConfig(bytes)
-                File(filesDir, "active-profile.conf").writeBytes(bytes)
-                profile = parsed
-                profileView.text = "Профиль импортирован и сохранён на устройстве"
-                renderState("Готов к подключению")
-                Toast.makeText(this, "Профиль успешно импортирован", Toast.LENGTH_LONG).show()
-            } catch (error: Exception) {
-                profile = null
-                profileView.text = "Импорт не удался. Выбери корректный WireGuard .conf файл."
-                renderState("Ошибка профиля")
-                Toast.makeText(this, "Не удалось прочитать профиль: проверь файл .conf", Toast.LENGTH_LONG).show()
+                Config.parse(ByteArrayInputStream(bytes))
+                val newFile = uniqueProfileFile(displayNameFor(uri))
+                newFile.writeBytes(bytes)
+                loadSavedProfiles(newFile.name)
+                Toast.makeText(this, "Профиль добавлен: ${newFile.nameWithoutExtension}", Toast.LENGTH_LONG).show()
+            } catch (_: Exception) {
+                Toast.makeText(this, "Не удалось импортировать. Выбери корректный WireGuard .conf файл.", Toast.LENGTH_LONG).show()
             }
         } else if (requestCode == vpnConsentRequest && resultCode == RESULT_OK) {
             startTunnel()
@@ -170,14 +277,13 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun parseConfig(bytes: ByteArray): Config =
-        Config.parse(ByteArrayInputStream(bytes))
-
     private fun requestConnection() {
         if (profile == null) {
-            Toast.makeText(this, "Сначала импортируй профиль сервера", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Сначала добавь профиль сервера", Toast.LENGTH_LONG).show()
             return
         }
+        if (isBusy || isConnected) return
+
         val consent = VpnService.prepare(this)
         if (consent != null) {
             @Suppress("DEPRECATION")
@@ -189,14 +295,22 @@ class MainActivity : Activity() {
 
     private fun startTunnel() {
         val config = profile ?: return
+        if (isBusy || isConnected) return
         val tunnelBackend = backend ?: GoBackend(applicationContext).also { backend = it }
+        isBusy = true
         renderState("Подключаемся…")
         Thread {
             try {
                 tunnelBackend.setState(tunnel, Tunnel.State.UP, config)
-                runOnUiThread { renderState("VPN подключён") }
-            } catch (error: Exception) {
                 runOnUiThread {
+                    isConnected = true
+                    isBusy = false
+                    renderState("VPN подключён")
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    isConnected = false
+                    isBusy = false
                     renderState("Не удалось подключиться")
                     Toast.makeText(this, "Ошибка VPN. Проверь профиль и доступность сервера.", Toast.LENGTH_LONG).show()
                 }
@@ -206,25 +320,37 @@ class MainActivity : Activity() {
 
     private fun disconnect() {
         val tunnelBackend = backend
-        if (tunnelBackend == null) {
-            renderState("VPN отключён")
+        if (tunnelBackend == null || !isConnected || isBusy) {
+            renderState(if (isConnected) "VPN подключён" else "VPN отключён")
             return
         }
+        isBusy = true
         renderState("Отключаемся…")
         Thread {
             try {
                 tunnelBackend.setState(tunnel, Tunnel.State.DOWN, null)
-                runOnUiThread { renderState("VPN отключён") }
-            } catch (error: Exception) {
-                runOnUiThread { renderState("Не удалось отключиться") }
+                runOnUiThread {
+                    isConnected = false
+                    isBusy = false
+                    renderState("VPN отключён")
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    isBusy = false
+                    renderState("Не удалось отключиться")
+                    Toast.makeText(this, "Не удалось отключить VPN. Попробуй ещё раз.", Toast.LENGTH_LONG).show()
+                }
             }
         }.start()
     }
 
     private fun renderState(message: String) {
         statusView.text = message
-        connectButton.isEnabled = !isWorking
-        disconnectButton.isEnabled = isWorking
+        val canEdit = !isConnected && !isBusy
+        importButton.isEnabled = canEdit
+        profileSpinner.isEnabled = canEdit && savedProfiles.isNotEmpty()
+        connectButton.isEnabled = profile != null && canEdit
+        disconnectButton.isEnabled = isConnected && !isBusy
     }
 
     private fun makeButton(label: String, color: Int): Button =
