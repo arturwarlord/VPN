@@ -24,6 +24,9 @@ jobs:
           set -euo pipefail
           test -s README.md
           test -s scripts/setup-wireguard.sh
+          grep -q 'Set WG_ENDPOINT' scripts/setup-wireguard.sh
+          grep -q 'FreeRoute managed WireGuard configuration' scripts/setup-wireguard.sh
+          grep -q 'attempting to restore the previous config' scripts/setup-wireguard.sh
           test -s settings.gradle.kts
           test -s gradle.properties
           grep -q '^android.useAndroidX=true$' gradle.properties
@@ -39,7 +42,13 @@ jobs:
           test -s ios/PacketTunnel/PacketTunnelProvider.swift
           test -s ios/Shared/TunnelConfiguration+WgQuickConfig.swift
           test -s docs/IOS_CLIENT.md
+          test -s docs/SERVER_DEPLOYMENT.md
+          test -s .github/workflows/diagnose-server.yml
           grep -q workflow_dispatch .github/workflows/deploy.yml
+          grep -q 'VPN_KNOWN_HOSTS' .github/workflows/deploy.yml
+          ! grep -q 'ssh-keyscan' .github/workflows/deploy.yml
+          grep -q 'StrictHostKeyChecking=yes' .github/workflows/deploy.yml
+          grep -q 'VPN_KNOWN_HOSTS' .github/workflows/diagnose-server.yml
           grep -q assembleDebug .github/workflows/android-client.yml
           grep -q 'WireGuardKitGo' .github/workflows/ios-client.yml
           grep -q 'CODE_SIGNING_ALLOWED=NO' .github/workflows/ios-client.yml
