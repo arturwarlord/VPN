@@ -7,3 +7,12 @@ wireguard-clients/
 .env
 .env.*
 !.env.example
+
+# Android / Gradle build outputs and local configuration
+.gradle/
+**/build/
+local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
