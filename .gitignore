@@ -1,0 +1,9 @@
+*.conf
+*.private
+*_private.key
+id_rsa
+id_ed25519
+wireguard-clients/
+.env
+.env.*
+!.env.example
