@@ -38,10 +38,11 @@ jobs:
           test -s ios/App/ContentView.swift
           test -s ios/PacketTunnel/PacketTunnelProvider.swift
           test -s ios/Shared/TunnelConfiguration+WgQuickConfig.swift
-          test -s docs/ANDROID_CLIENT.md
+          test -s docs/IOS_CLIENT.md
           grep -q workflow_dispatch .github/workflows/deploy.yml
           grep -q assembleDebug .github/workflows/android-client.yml
           grep -q 'WireGuardKitGo' .github/workflows/ios-client.yml
+          grep -q 'CODE_SIGNING_ALLOWED=NO' .github/workflows/ios-client.yml
 
       - name: Check tracked files for private key material
         shell: bash
