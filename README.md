@@ -16,6 +16,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [x] iOS SwiftUI app and Packet Tunnel extension compile successfully as an unsigned build in GitHub Actions.
 - [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, and runs the 24 endpoint-validation tests.
 - [x] iOS tunnel configuration is stored in a shared Keychain group; VPN preferences retain only a Keychain reference. The app avoids overwriting unrelated VPN profiles.
+- [x] Android, Windows and iPhone clients include an opt-in check of the current public IP and estimated exit country. The check sends the current IP to `ipwho.is` only after the user presses the button; it does not save the result.
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
 - [ ] Sign and install the iOS app with an Apple developer team that has the required Network Extension entitlement.
 - [ ] Find a sustainable, genuinely free VPN exit node outside Russia.
@@ -24,17 +25,17 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 The VPN service is **not live yet**. No server has been provisioned or deployed. The country websites see is determined by the remote server's network location, not by a label in the app.
 
-Latest repository validation (including all 24 endpoint tests): [GitHub Actions CI run](https://github.com/arturwarlord/VPN/actions/runs/40953439683).
+Latest repository validation (including all 24 endpoint tests): [GitHub Actions CI run](https://github.com/arturwarlord/VPN/actions/runs/40955025275).
 
 ## Android client
 
 Source: `app/`. FreeRoute has its own native UI, local profile picker, profile import, connect/disconnect flow, and an IPv6-route warning. It embeds WireGuard's tunnel engine as a library; it does not require the user to install a separate WireGuard consumer app. Imported profiles stay in the app's private storage and are not uploaded to GitHub.
 
-A debug APK has been built successfully. You can download it from [this verified build artifact](https://github.com/arturwarlord/VPN/actions/runs/40945904848) or use [Build FreeRoute Android APK](https://github.com/arturwarlord/VPN/actions/workflows/android-client.yml).
+A debug APK has been built successfully. You can download it from [this verified build artifact](https://github.com/arturwarlord/VPN/actions/runs/40954784618) or use [Build FreeRoute Android APK](https://github.com/arturwarlord/VPN/actions/workflows/android-client.yml).
 
 This is a debug build, not a release-signed public distribution. The app cannot connect until a valid profile for a reachable server is available. On POCO/Xiaomi, background and battery-restriction behavior still needs real-device testing.
 
-Details: [Android client notes](docs/ANDROID_CLIENT.md).
+Details: [Android client notes](docs/ANDROID_CLIENT.md). The app's country check is diagnostic only; it does not select a country or supply a server.
 
 For a temporary real-tunnel smoke test before our own server exists, see [Client smoke test](docs/CLIENT_SMOKE_TEST.md). This uses a third-party provider endpoint and does not count as a FreeRoute server.
 
@@ -43,11 +44,11 @@ For a temporary real-tunnel smoke test before our own server exists, see [Client
 Source: `windows/`. The Windows client provides its own profile list, import, connection and disconnection controls. The build workflow checks the Authenticode signature of the official WireGuard Windows MSI before extracting the tunnel engine into the FreeRoute package. The engine is bundled, so a user should not need to install a separate VPN consumer app.
 
 The first x64 package build completed successfully:
-[Open the Windows build run](https://github.com/arturwarlord/VPN/actions/runs/40946493537)
+[Open the Windows build run](https://github.com/arturwarlord/VPN/actions/runs/40954828442)
 
 To obtain the package, open that run and download the `freeroute-windows-x64` artifact. It is a development package and still needs a real endpoint/profile connection test. The app requests administrator privileges because Windows tunnel services and networking drivers require elevation.
 
-Details: [Windows client notes](docs/WINDOWS_CLIENT.md).
+Details: [Windows client notes](docs/WINDOWS_CLIENT.md). The app's country check is diagnostic only; it does not select a country or supply a server.
 
 ## iPhone client
 
