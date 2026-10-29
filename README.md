@@ -14,6 +14,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
 - [x] iOS SwiftUI app and Packet Tunnel extension compile successfully as an unsigned build in GitHub Actions.
+- [x] All three clients include a manual exit-IP/country check that runs only after the user taps the button and clearly discloses the external IP-geolocation lookup.
 - [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, and runs the 24 endpoint-validation tests.
 - [x] iOS tunnel configuration is stored in a shared Keychain group; VPN preferences retain only a Keychain reference. The app avoids overwriting unrelated VPN profiles.
 - [x] Android, Windows and iPhone clients include an opt-in check of the current public IP and estimated exit country. The check sends the current IP to `ipwho.is` only after the user presses the button; it does not save the result.
@@ -52,8 +53,8 @@ Details: [Windows client notes](docs/WINDOWS_CLIENT.md). The app's country check
 
 ## iPhone client
 
-Source: `ios/`. The SwiftUI app and Network Extension Packet Tunnel provider use the embeddable WireGuardKit engine. The latest unsigned app build and Packet Tunnel extension compile, pass bundle-metadata checks and are packaged by GitHub Actions:
-[Open the successful iOS build](https://github.com/arturwarlord/VPN/actions/runs/40951584935)
+Source: `ios/`. The SwiftUI app and Network Extension Packet Tunnel provider use the embeddable WireGuardKit engine. The latest unsigned iOS build, including the exit-country check, compiles the app and Packet Tunnel extension, passes bundle-metadata checks and is packaged by GitHub Actions:
+[Open the successful iOS build](https://github.com/arturwarlord/VPN/actions/runs/40954886573)
 
 Active tunnel configuration is saved in Keychain using the shared App Group `group.com.arturwarlord.freeroute`; the system VPN preferences store a persistent reference rather than the client private key text. Imported `.conf` files remain inside the protected local app sandbox and are excluded from ordinary backup.
 
