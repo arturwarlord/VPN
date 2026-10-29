@@ -31,6 +31,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: App/FreeRoute.entitlements
         CODE_SIGNING_ALLOWED: NO
     dependencies:
+      - target: FreeRoutePacketTunnel
+        embed: true
       - sdk: NetworkExtension.framework
 
   FreeRoutePacketTunnel:
