@@ -96,6 +96,9 @@ jobs:
           make -C "$GO_BRIDGE" build \
             PLATFORM_NAME=iphoneos \
             ARCHS=arm64 \
+            DEPLOYMENT_TARGET_CLANG_FLAG_NAME=miphoneos-version-min \
+            DEPLOYMENT_TARGET_CLANG_ENV_NAME=IPHONEOS_DEPLOYMENT_TARGET \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
             SDKROOT="$(xcrun --sdk iphoneos --show-sdk-path)" \
             CONFIGURATION_BUILD_DIR="$PRODUCTS" \
             CONFIGURATION_TEMP_DIR="$TEMP_BUILD" \
