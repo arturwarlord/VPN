@@ -1,6 +1,7 @@
 name: Build FreeRoute Windows package
 
 on:
+  workflow_call:
   push:
     branches: [main]
     paths:
