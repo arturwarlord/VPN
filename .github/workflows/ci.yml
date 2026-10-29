@@ -15,8 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check shell syntax
-        run: bash -n scripts/setup-wireguard.sh
+      - name: Validate shell scripts and GitHub Actions Bash steps
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/setup-wireguard.sh
+          bash -n scripts/check-workflow-shell.sh
+          bash scripts/check-workflow-shell.sh
 
       - name: Check required project files and build settings
         shell: bash
@@ -27,6 +32,7 @@ jobs:
           grep -q 'Set WG_ENDPOINT' scripts/setup-wireguard.sh
           grep -q 'FreeRoute managed WireGuard configuration' scripts/setup-wireguard.sh
           grep -q 'attempting to restore the previous config' scripts/setup-wireguard.sh
+          test -s scripts/check-workflow-shell.sh
           test -s settings.gradle.kts
           test -s gradle.properties
           grep -q '^android.useAndroidX=true$' gradle.properties
