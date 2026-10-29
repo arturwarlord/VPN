@@ -49,10 +49,16 @@ jobs:
           test -s ios/App/ContentView.swift
           test -s ios/PacketTunnel/PacketTunnelProvider.swift
           test -s ios/Shared/TunnelConfiguration+WgQuickConfig.swift
+          test -s ios/Shared/ProfileKeychain.swift
           test -s docs/IOS_CLIENT.md
           test -s docs/SERVER_DEPLOYMENT.md
           test -s docs/FREE_HOST_RESEARCH.md
           test -s .github/workflows/diagnose-server.yml
+          grep -q 'group.com.arturwarlord.freeroute' ios/App/FreeRoute.entitlements
+          grep -q 'group.com.arturwarlord.freeroute' ios/PacketTunnel/FreeRoutePacketTunnel.entitlements
+          grep -q 'ProfileKeychain.load' ios/PacketTunnel/PacketTunnelProvider.swift
+          ! grep -q 'providerConfiguration = \["WgQuickConfig"' ios/App/ContentView.swift
+          grep -q 'previousReference' ios/App/ContentView.swift
           grep -q 'diagnose-wireguard-server.sh' .github/workflows/diagnose-server.yml
           grep -q workflow_dispatch .github/workflows/deploy.yml
           grep -q 'VPN_KNOWN_HOSTS' .github/workflows/deploy.yml
