@@ -62,6 +62,39 @@ jobs:
           if not 1 <= port <= 65535 or str(port) != sys.argv[2]:
               raise SystemExit("port must be a canonical integer from 1 to 65535.")
           PY
+
+      - name: Verify endpoint country is not Russia
+        env:
+          ENDPOINT_IP: ${{ inputs.endpoint_ip }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The endpoint is public already, but this sends it to a third-party
+          # geolocation service. Fail closed if the service cannot confirm a country.
+          curl --fail --silent --show-error --location --max-time 15 --retry 1 \
+            "https://ipwho.is/$ENDPOINT_IP?fields=success,ip,country,country_code" \
+            --output "$RUNNER_TEMP/endpoint-geo.json"
+          python3 - "$RUNNER_TEMP/endpoint-geo.json" "$ENDPOINT_IP" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              response = json.load(handle)
+
+          if response.get("success") is not True:
+              raise SystemExit("Geolocation service could not verify this endpoint; refusing deployment.")
+          if response.get("ip") != sys.argv[2]:
+              raise SystemExit("Geolocation response did not match the requested endpoint; refusing deployment.")
+
+          country_code = str(response.get("country_code", "")).upper()
+          country = str(response.get("country", ""))
+          if len(country_code) != 2:
+              raise SystemExit("Geolocation service returned no valid country; refusing deployment.")
+          if country_code == "RU":
+              raise SystemExit("The selected VPN endpoint geolocates to Russia; choose a different country.")
+          print(f"Endpoint geolocation: {country} ({country_code}). This is an IP database estimate, not a guarantee of website geolocation.")
+          PY
+
           # Run the exact same strict, non-mutating checks as the remote installer
           # so special-purpose ranges rejected by it cannot reach the deployment step.
           WG_VALIDATE_ONLY=1 WG_ENDPOINT="$ENDPOINT_IP" WG_PORT="$WG_PORT" bash scripts/setup-wireguard.sh
