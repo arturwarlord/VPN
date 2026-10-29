@@ -16,6 +16,7 @@ targets:
     sources:
       - App/FreeRouteIOSApp.swift
       - App/ContentView.swift
+      - Shared/ProfileKeychain.swift
     resources:
       - Resources/THIRD_PARTY_NOTICES.txt
     settings:
@@ -43,6 +44,7 @@ targets:
       - PacketTunnel/PacketTunnelProvider.swift
       - Shared/TunnelConfiguration+WgQuickConfig.swift
       - Shared/String+ArrayConversion.swift
+      - Shared/ProfileKeychain.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.arturwarlord.freeroute.network-extension
