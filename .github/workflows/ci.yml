@@ -37,12 +37,16 @@ jobs:
           grep -q 'attempting to restore the previous config' scripts/setup-wireguard.sh
           grep -q 'Refusing to drop or rewrite custom peers' scripts/setup-wireguard.sh
           grep -q 'existing_peer_count' scripts/setup-wireguard.sh
-          grep -q 'iptables -A FORWARD -i wg0 -o' scripts/setup-wireguard.sh
+          grep -q 'iptables -N FREEROUTE_FORWARD' scripts/setup-wireguard.sh
           grep -q -- '--ctstate RELATED,ESTABLISHED' scripts/setup-wireguard.sh
-          ! grep -q 'iptables -A FORWARD -i wg0 -j ACCEPT' scripts/setup-wireguard.sh
+          grep -q 'iptables -I FORWARD 1 -j FREEROUTE_FORWARD' scripts/setup-wireguard.sh
+          grep -q 'iptables -I INPUT 1 -i wg0 -j DROP' scripts/setup-wireguard.sh
+          grep -q '192.168.0.0/16 -j DROP' scripts/setup-wireguard.sh
+          grep -q 'while iptables -C FORWARD -j FREEROUTE_FORWARD' scripts/setup-wireguard.sh
           test -s scripts/diagnose-wireguard-server.sh
-          grep -q 'NAT rule is missing' scripts/diagnose-wireguard-server.sh
-          grep -q 'forwarding rule is missing' scripts/diagnose-wireguard-server.sh
+          grep -q 'FREEROUTE_FORWARD' scripts/diagnose-wireguard-server.sh
+          grep -q 'approved rule set' scripts/diagnose-wireguard-server.sh
+          grep -q 'host-local services' scripts/diagnose-wireguard-server.sh
           test -s scripts/check-workflow-shell.sh
           test -s tests/validate-endpoint.sh
           test -s settings.gradle.kts
