@@ -36,6 +36,28 @@ jobs:
           fi
           xcodegen --version
 
+      - name: Checkout WireGuardKit source and normalize Swift tools version
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ios/vendor
+          git clone --depth 1 https://github.com/WireGuard/wireguard-apple.git ios/vendor/wireguard-apple
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path("ios/vendor/wireguard-apple/Package.swift")
+          source = manifest.read_text(encoding="utf-8")
+          first_line = source.splitlines()[0]
+          if first_line == "// swift-tools-version:5.3":
+              source = source.replace(first_line, "// swift-tools-version:5.5", 1)
+              manifest.write_text(source, encoding="utf-8")
+              print("Updated Swift tools manifest to 5.5 for SDK platform declarations.")
+          elif first_line.startswith("// swift-tools-version:") and first_line >= "// swift-tools-version:5.5":
+              print("WireGuardKit manifest already declares a compatible tools version.")
+          else:
+              raise SystemExit("Unexpected WireGuardKit Package.swift tools-version: " + first_line)
+          PY
+
       - name: Generate Xcode project
         shell: bash
         run: xcodegen generate --spec project.yml
@@ -48,14 +70,13 @@ jobs:
           xcodebuild -resolvePackageDependencies \
             -project ios/FreeRoute.xcodeproj \
             -scheme FreeRouteiOS \
-            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
             -derivedDataPath "$RUNNER_TEMP/FreeRouteDerivedData"
 
       - name: Build WireGuard Go bridge for iOS
         shell: bash
         run: |
           set -euo pipefail
-          GO_BRIDGE="$RUNNER_TEMP/SourcePackages/checkouts/wireguard-apple/Sources/WireGuardKitGo"
+          GO_BRIDGE="ios/vendor/wireguard-apple/Sources/WireGuardKitGo"
           PRODUCTS="$RUNNER_TEMP/FreeRouteDerivedData/Build/Products/Release-iphoneos"
           TEMP_BUILD="$RUNNER_TEMP/FreeRouteDerivedData/Build/Intermediates.noindex/WireGuardGoBridge"
           test -f "$GO_BRIDGE/Makefile"
@@ -81,7 +102,6 @@ jobs:
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
             -derivedDataPath "$RUNNER_TEMP/FreeRouteDerivedData" \
-            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
             CODE_SIGNING_ALLOWED=NO \
             build
 
