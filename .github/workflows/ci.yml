@@ -42,11 +42,13 @@ jobs:
           grep -q 'iptables -I FORWARD 1 -j FREEROUTE_FORWARD' scripts/setup-wireguard.sh
           grep -q 'iptables -I INPUT 1 -i wg0 -j DROP' scripts/setup-wireguard.sh
           grep -q '192.168.0.0/16 -j DROP' scripts/setup-wireguard.sh
+          grep -q '198.51.100.0/24 -j DROP' scripts/setup-wireguard.sh
+          grep -q 'freeroute-managed' scripts/setup-wireguard.sh
           grep -q 'while iptables -C FORWARD -j FREEROUTE_FORWARD' scripts/setup-wireguard.sh
           test -s scripts/diagnose-wireguard-server.sh
           grep -q 'FREEROUTE_FORWARD' scripts/diagnose-wireguard-server.sh
-          grep -q 'approved rule set' scripts/diagnose-wireguard-server.sh
-          grep -q 'host-local services' scripts/diagnose-wireguard-server.sh
+          grep -q 'exact approved rule set' scripts/diagnose-wireguard-server.sh
+          grep -q 'host-access block' scripts/diagnose-wireguard-server.sh
           test -s scripts/check-workflow-shell.sh
           test -s tests/validate-endpoint.sh
           test -s settings.gradle.kts
