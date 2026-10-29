@@ -7,13 +7,14 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 ## Current status
 
 - [x] Ubuntu/Debian WireGuard server bootstrap script with explicit endpoint validation, safe permissions and rollback if service startup fails.
-- [x] 22 automated endpoint-validation tests for malformed, private, local and otherwise non-public addresses/ports.
+- [x] 24 automated endpoint-validation tests for malformed, private, local, special-purpose and otherwise non-public addresses/ports.
 - [x] Manual GitHub Actions server-deployment workflow with verified SSH host-key pinning.
 - [x] Read-only server diagnostics that do not print private client profiles.
 - [x] Native Android client with local multi-profile management, connect/disconnect controls and an IPv6-route warning.
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
 - [x] iOS SwiftUI app and Packet Tunnel extension compile successfully as an unsigned build in GitHub Actions.
+- [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, and runs the 24 endpoint-validation tests.
 - [x] iOS tunnel configuration is stored in a shared Keychain group; VPN preferences retain only a Keychain reference. The app avoids overwriting unrelated VPN profiles.
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
 - [ ] Sign and install the iOS app with an Apple developer team that has the required Network Extension entitlement.
@@ -22,6 +23,8 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [ ] Verify end-to-end country switching on all clients.
 
 The VPN service is **not live yet**. No server has been provisioned or deployed. The country websites see is determined by the remote server's network location, not by a label in the app.
+
+Latest repository validation (including all 24 endpoint tests): [GitHub Actions CI run](https://github.com/arturwarlord/VPN/actions/runs/40952356183).
 
 ## Android client
 
