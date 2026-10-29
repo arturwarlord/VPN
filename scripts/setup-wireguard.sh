@@ -92,8 +92,8 @@ Address = 10.77.0.1/24
 ListenPort = ${PORT}
 PrivateKey = ${SERVER_PRIVATE}
 SaveConfig = false
-PostUp = iptables -t nat -A POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE; iptables -A FORWARD -i wg0 -j ACCEPT; iptables -A FORWARD -o wg0 -j ACCEPT
-PostDown = iptables -t nat -D POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE; iptables -D FORWARD -i wg0 -j ACCEPT; iptables -D FORWARD -o wg0 -j ACCEPT
+PostUp = iptables -t nat -A POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE; iptables -A FORWARD -i wg0 -o ${WAN_IF} -j ACCEPT; iptables -A FORWARD -i ${WAN_IF} -o wg0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+PostDown = iptables -t nat -D POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE; iptables -D FORWARD -i wg0 -o ${WAN_IF} -j ACCEPT; iptables -D FORWARD -i ${WAN_IF} -o wg0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 EOF
 
 # Three independent client keys are generated on the VPS. Only the public keys
