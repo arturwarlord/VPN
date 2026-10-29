@@ -6,11 +6,13 @@ on:
     paths:
       - "app/**"
       - "settings.gradle.kts"
+      - "gradle.properties"
       - ".github/workflows/android-client.yml"
   pull_request:
     paths:
       - "app/**"
       - "settings.gradle.kts"
+      - "gradle.properties"
       - ".github/workflows/android-client.yml"
   workflow_dispatch:
 
