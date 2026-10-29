@@ -56,10 +56,29 @@ References:
 - Allocation and policy: https://www.freevps.org/
 - Sponsor directory: https://www.freevps.org/sponsors.html
 
-### switched.cloud and Openworld — not approved
+### switched.cloud — can run briefly for testing, not an unattended server
 
-- switched.cloud advertises a shared IPv4 with a limited number of forwarded TCP/UDP ports and a dedicated IPv6 address. A VM consumes twice the base allocation, and reliable access for IPv4-only client networks has not been established. This needs further verification before use: https://switched.cloud/
-- Openworld's free tier must be renewed every seven days and is automatically suspended if not renewed. That conflicts with a fully automatic, always-on service requirement: https://openworld.eu.org/faq
+The provider offers root access, five forwarded TCP/UDP ports on a shared IPv4, and one directly reachable IPv6 address. However, the account starts with only three days of Runtime. Each VPS consumes an hour of Runtime per hour it exists, and a Cloud Token adds one day (two days with Plus). Runtime is obtained through completed link/referral actions; when Runtime runs out, instances stop and are deleted if not topped up within three days. There are no backups, and allocations can change.
+
+That does not satisfy a permanently online service without manual renewal or a sustained allowance of tokens, and the no-backup policy is undesirable for a VPN configuration. Do not use it for ongoing personal traffic. It could only be considered for a disposable short-lived build/port-forwarding experiment, after separately confirming the fair-use rules permit a private WireGuard endpoint.
+
+Official reference: https://switched.cloud/
+
+### Openworld — not approved for unattended service
+
+The free plan includes NAT IPv4 and a dedicated public IPv6 address, but instances must be renewed every seven days and automatically suspend when the renewal is missed. That conflicts with fully automated always-on operation. https://openworld.eu.org/faq
+
+### vpsFree.cz — not free
+
+The community/nonprofit VPS requires membership dues of 300 CZK per month (36 EUR for three months); the published plan is not a permanent zero-cost service. It offers good VPS capabilities and public IPv4 but violates the budget requirement. Official references: https://vpsfree.cz/ and https://kb.vpsfree.cz/informace/platby
+
+### Route64 — tunnel service, not a compute host
+
+Route64 offers a free IPv6 tunnelbroker that can route an IPv6 subnet through its network, but it does not provide the Linux VM or dedicated WireGuard exit server this project needs. Its static-IP tunnels are described as supporter's services. A home/VPS endpoint is still needed, and an IPv6-only tunnel does not carry IPv4 full-tunnel traffic. Reference: https://www.route64.org/en
+
+### OpenClaw Cloud free computer — trial period only
+
+OpenClaw Cloud advertises a public IP and SSH access, but its own page states the free compute period is seven days; after that the VM is powered off unless additional free time is received or a paid plan is selected. It is not a permanent always-on endpoint. Reference: https://open.claw.cloud/
 
 ## Acceptance checklist for any future host
 
