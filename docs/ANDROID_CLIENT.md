@@ -35,3 +35,8 @@ The debug APK is unsigned for distribution purposes and intended for personal in
 - Profiles are stored inside the app's internal sandbox, which is not directly visible to other ordinary apps. Removing the app removes its local data.
 - Android backup is disabled for this app so the local VPN profiles are not included in ordinary app backup.
 - This MVP has no account, remote profile service, or telemetry.
+
+
+## IPv6 behavior in generated FreeRoute profiles
+
+The server generator assigns each device a private ULA IPv6 address and adds `::/0` alongside `0.0.0.0/0`. Until native IPv6 egress is implemented, the server drops forwarded IPv6 packets and blocks IPv6 access to its own services. IPv6-only websites will therefore be unavailable while connected. This is a server-side fail-closed measure, not a device kill switch: behavior after tunnel loss still needs testing on the POCO.
