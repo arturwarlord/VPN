@@ -49,7 +49,9 @@ The installer:
 - Writes the candidate configuration atomically, backs up an existing FreeRoute-managed config before replacement, and attempts to restore the backup if WireGuard fails to start.
 - Enables and starts `wg-quick@wg0`, and confirms the interface is active.
 
-This setup currently enables IPv4 forwarding/NAT and generates client profiles with `AllowedIPs = 0.0.0.0/0`. It does not set up server-side IPv6 routing. Client apps warn if the profile lacks an IPv6 default route; this is not a full kill switch. Do not use it for sensitive traffic until leak and DNS behavior have been tested.
+This setup currently enables IPv4 forwarding/NAT and generates client profiles with `AllowedIPs = 0.0.0.0/0`. It installs a dedicated `FREEROUTE_FORWARD` chain at the top of the host `FORWARD` chain: only public-internet traffic from `wg0` to the detected WAN interface is accepted; client traffic to private, loopback, link-local, carrier-grade NAT, documentation, benchmarking, multicast and reserved IPv4 ranges is dropped; forwarding to every other interface and unsolicited traffic into `wg0` is dropped. A separate first-position `INPUT` rule blocks VPN clients from reaching services on the VPN host itself. The installer refuses to flush an existing chain unless its FreeRoute ownership marker is present.
+
+This is server-side IPv4 isolation, not a full client kill switch. The setup does not configure server-side IPv6 forwarding; clients warn when the profile lacks an IPv6 default route, but that warning does not prevent every possible IPv6 leak. DNS behavior, IPv6 behavior, provider firewall reachability and on-device routing still require end-to-end tests. Do not use it for sensitive traffic until those tests have passed.
 
 ## Diagnose
 
@@ -57,7 +59,9 @@ Open **Actions → Diagnose WireGuard server → Run workflow** after deployment
 - `wg-quick@wg0` is active and enabled at boot.
 - The managed config is present with permissions 600.
 - IPv4 forwarding is enabled.
-- The IPv4 NAT masquerade rule and both WireGuard forwarding rules exist in iptables, and the broad client-to-anywhere forwarding rule is absent.
+- The NAT rule is present, the exact approved `FREEROUTE_FORWARD` rules are present in the expected order, and its jump is the first `FORWARD` rule.
+- The first `INPUT` rule drops all traffic arriving from `wg0`, preventing VPN clients from reaching services on the VPS itself.
+- The chain blocks known private and special-purpose IPv4 destinations and forwards client traffic only out through the detected WAN interface.
 - Windows, Android and iPhone profiles exist with permissions 600 and no placeholder endpoint.
 
 It prints counts and status only; it does not print any private keys or client profile contents. The check cannot verify the provider's external firewall, whether the client has connected, or whether a public-IP/geolocation lookup returns the expected country.
