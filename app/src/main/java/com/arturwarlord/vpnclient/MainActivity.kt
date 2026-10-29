@@ -23,7 +23,10 @@ import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.Inet6Address
+import java.net.URL
+import org.json.JSONObject
 
 class MainActivity : Activity() {
     private val pickProfileRequest = 4101
@@ -32,6 +35,7 @@ class MainActivity : Activity() {
     private var profile: Config? = null
     private var isConnected = false
     private var isBusy = false
+    private var isCheckingExit = false
     private var selectedProfileFileName: String? = null
     private val savedProfiles = mutableListOf<SavedProfile>()
 
@@ -41,6 +45,7 @@ class MainActivity : Activity() {
     private lateinit var importButton: Button
     private lateinit var connectButton: Button
     private lateinit var disconnectButton: Button
+    private lateinit var checkCountryButton: Button
 
     private data class SavedProfile(
         val fileName: String,
@@ -150,12 +155,16 @@ class MainActivity : Activity() {
         disconnectButton.setOnClickListener { disconnect() }
         root.addView(disconnectButton, buttonLayout())
 
+        checkCountryButton = makeButton("Проверить страну выхода", Color.rgb(52, 83, 133))
+        checkCountryButton.setOnClickListener { checkExitCountry() }
+        root.addView(checkCountryButton, buttonLayout())
+
         val licensesButton = makeButton("О лицензиях", Color.rgb(36, 48, 71))
         licensesButton.setOnClickListener { showLicenses() }
         root.addView(licensesButton, buttonLayout())
 
         val note = TextView(this).apply {
-            text = "Каждый профиль хранится только на этом устройстве. Имя профиля можно использовать для обозначения страны, но фактическая страна выхода определяется удалённым сервером."
+            text = "Каждый профиль хранится только на этом устройстве. Имя профиля не подтверждает страну выхода. Проверка по кнопке отправляет текущий публичный IP сервису ipwho.is; результат приблизительный и не сохраняется."
             textSize = 12f
             setTextColor(Color.rgb(140, 153, 177))
             gravity = Gravity.CENTER
@@ -358,6 +367,66 @@ class MainActivity : Activity() {
         }.start()
     }
 
+    private fun checkExitCountry() {
+        if (!isConnected || isBusy || isCheckingExit) {
+            Toast.makeText(this, "Сначала подключи VPN", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isCheckingExit = true
+        checkCountryButton.isEnabled = false
+        Thread {
+            var title = "Проверка страны выхода"
+            var message: String
+            var connection: HttpURLConnection? = null
+
+            try {
+                connection = URL("https://ipwho.is/?fields=success,ip,country,country_code")
+                    .openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 10_000
+                connection.readTimeout = 10_000
+                connection.instanceFollowRedirects = true
+                connection.setRequestProperty("Accept", "application/json")
+
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    throw IllegalStateException("Сервис геолокации вернул HTTP $code.")
+                }
+
+                val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val json = JSONObject(body)
+                if (!json.optBoolean("success", false)) {
+                    throw IllegalStateException("Сервис не смог определить страну текущего IP.")
+                }
+
+                val ip = json.optString("ip")
+                val country = json.optString("country")
+                val countryCode = json.optString("country_code")
+                if (ip.isBlank() || country.isBlank() || countryCode.length != 2) {
+                    throw IllegalStateException("Сервис вернул неполные сведения о стране.")
+                }
+
+                message = "Публичный IP: $ip\nОпределяемая страна: $country ($countryCode)\n\nЭто геолокация по IP, а не абсолютная гарантия. Запрос получил сервис ipwho.is; если туннель отключился во время проверки, он может увидеть IP основного подключения."
+            } catch (error: Exception) {
+                title = "Не удалось проверить страну"
+                message = "Проверь подключение к VPN и доступность сервиса геолокации. Проверка не сохраняет IP в приложении.\n\nПричина: ${error.message ?: error.javaClass.simpleName}"
+            } finally {
+                connection?.disconnect()
+            }
+
+            runOnUiThread {
+                isCheckingExit = false
+                checkCountryButton.isEnabled = isConnected && !isBusy
+                AlertDialog.Builder(this)
+                    .setTitle(title)
+                    .setMessage(message)
+                    .setPositiveButton("Закрыть", null)
+                    .show()
+            }
+        }.start()
+    }
+
     private fun disconnect() {
         val tunnelBackend = backend
         if (tunnelBackend == null || !isConnected || isBusy) {
@@ -391,6 +460,7 @@ class MainActivity : Activity() {
         profileSpinner.isEnabled = canEdit && savedProfiles.isNotEmpty()
         connectButton.isEnabled = profile != null && canEdit
         disconnectButton.isEnabled = isConnected && !isBusy
+        checkCountryButton.isEnabled = isConnected && !isBusy && !isCheckingExit
     }
 
     private fun showLicenses() {
