@@ -16,3 +16,7 @@ local.properties
 *.aab
 *.jks
 *.keystore
+
+# Generated Xcode project and CI-only WireGuardKit dependency checkout
+ios/FreeRoute.xcodeproj/
+ios/vendor/wireguard-apple/
