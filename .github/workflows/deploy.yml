@@ -51,8 +51,30 @@ jobs:
           except ValueError:
               raise SystemExit("endpoint_ip must be a valid IPv4 or IPv6 address.")
 
-          if not endpoint.is_global:
-              raise SystemExit("endpoint_ip must be a public, globally routable IPv4 or IPv6 address.")
+          blocked_ipv4_ranges = (
+              "100.64.0.0/10",
+              "192.0.0.0/24",
+              "192.0.2.0/24",
+              "192.88.99.0/24",
+              "198.18.0.0/15",
+              "198.51.100.0/24",
+              "203.0.113.0/24",
+          )
+          is_blocked_v4_special = (
+              isinstance(endpoint, ipaddress.IPv4Address)
+              and any(endpoint in ipaddress.ip_network(network) for network in blocked_ipv4_ranges)
+          )
+          if (
+              not endpoint.is_global
+              or endpoint.is_private
+              or endpoint.is_loopback
+              or endpoint.is_link_local
+              or endpoint.is_multicast
+              or endpoint.is_reserved
+              or endpoint.is_unspecified
+              or is_blocked_v4_special
+          ):
+              raise SystemExit("endpoint_ip must be a globally routable public unicast IPv4 or IPv6 address.")
           if isinstance(endpoint, ipaddress.IPv6Address) and endpoint.ipv4_mapped is not None:
               raise SystemExit("Use the IPv4 address directly instead of an IPv4-mapped IPv6 address.")
 
