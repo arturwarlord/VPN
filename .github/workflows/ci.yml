@@ -35,6 +35,8 @@ jobs:
           grep -q 'Set WG_ENDPOINT' scripts/setup-wireguard.sh
           grep -q 'FreeRoute managed WireGuard configuration' scripts/setup-wireguard.sh
           grep -q 'attempting to restore the previous config' scripts/setup-wireguard.sh
+          grep -q 'Refusing to drop or rewrite custom peers' scripts/setup-wireguard.sh
+          grep -q 'existing_peer_count' scripts/setup-wireguard.sh
           grep -q 'iptables -A FORWARD -i wg0 -o' scripts/setup-wireguard.sh
           grep -q -- '--ctstate RELATED,ESTABLISHED' scripts/setup-wireguard.sh
           ! grep -q 'iptables -A FORWARD -i wg0 -j ACCEPT' scripts/setup-wireguard.sh
