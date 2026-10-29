@@ -5,44 +5,38 @@ umask 077
 fail() { echo "ERROR: $*" >&2; exit 1; }
 
 validate_inputs() {
-  # Require an explicit public IPv4 endpoint. Never create profiles with a placeholder.
+  # Validate an explicit public literal IP. IPv6 literals are supported for the
+  # outer WireGuard endpoint; the server still needs working IPv4 egress for NAT.
   WG_ENDPOINT="${WG_ENDPOINT:-}"
-  [[ -n "$WG_ENDPOINT" ]] || fail "Set WG_ENDPOINT to this server's public IPv4 address."
-  [[ "$WG_ENDPOINT" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || fail "WG_ENDPOINT must be an IPv4 address."
+  [[ -n "$WG_ENDPOINT" ]] || fail "Set WG_ENDPOINT to this server's public IPv4 or IPv6 address."
+  command -v python3 >/dev/null || fail "python3 is required to validate a public IPv4/IPv6 endpoint."
 
-  IFS='.' read -r -a endpoint_octets <<< "$WG_ENDPOINT"
-  for octet in "${endpoint_octets[@]}"; do
-    [[ "$octet" =~ ^[0-9]{1,3}$ ]] || fail "WG_ENDPOINT must be an IPv4 address."
-    [[ "${#octet}" -eq 1 || "$octet" != 0* ]] || fail "WG_ENDPOINT must use canonical IPv4 notation."
-    (( 10#$octet <= 255 )) || fail "WG_ENDPOINT contains an octet above 255."
-  done
+  local normalized_endpoint
+  if ! normalized_endpoint="$(python3 - "$WG_ENDPOINT" <<'PY'
+import ipaddress
+import sys
 
-  a="${endpoint_octets[0]}"
-  b="${endpoint_octets[1]}"
-  c="${endpoint_octets[2]}"
-  if (( a == 0 || a == 10 || a == 127 || a >= 224 )); then
-    fail "WG_ENDPOINT must be a globally routable public IPv4 address."
+try:
+    endpoint = ipaddress.ip_address(sys.argv[1])
+except ValueError:
+    raise SystemExit("WG_ENDPOINT must be a canonical IPv4 or IPv6 literal.")
+
+if not endpoint.is_global:
+    raise SystemExit("WG_ENDPOINT must be a globally routable public IPv4 or IPv6 address.")
+if isinstance(endpoint, ipaddress.IPv6Address) and endpoint.ipv4_mapped is not None:
+    raise SystemExit("Use the IPv4 address directly instead of an IPv4-mapped IPv6 address.")
+
+print(endpoint.compressed)
+PY
+)"; then
+    fail "WG_ENDPOINT must be a globally routable public IPv4 or IPv6 literal."
   fi
-  if (( a == 100 && b >= 64 && b <= 127 )); then
-    fail "WG_ENDPOINT cannot use a carrier-grade NAT address."
-  fi
-  if (( a == 169 && b == 254 )); then
-    fail "WG_ENDPOINT cannot use a link-local address."
-  fi
-  if (( a == 172 && b >= 16 && b <= 31 )); then
-    fail "WG_ENDPOINT cannot use a private IPv4 address."
-  fi
-  if (( a == 192 && b == 168 )); then
-    fail "WG_ENDPOINT cannot use a private IPv4 address."
-  fi
-  if (( a == 192 && b == 0 && (c == 0 || c == 2) )) || (( a == 192 && b == 88 && c == 99 )); then
-    fail "WG_ENDPOINT cannot use a special-purpose or deprecated IPv4 range."
-  fi
-  if (( a == 198 && b == 51 && c == 100 )) || (( a == 203 && b == 0 && c == 113 )); then
-    fail "WG_ENDPOINT cannot use a documentation-only IPv4 address."
-  fi
-  if (( a == 198 && (b == 18 || b == 19) )); then
-    fail "WG_ENDPOINT cannot use a benchmarking-only IPv4 address."
+  WG_ENDPOINT="$normalized_endpoint"
+
+  if [[ "$WG_ENDPOINT" == *:* ]]; then
+    ENDPOINT_HOST="[$WG_ENDPOINT]"
+  else
+    ENDPOINT_HOST="$WG_ENDPOINT"
   fi
 
   PORT="${WG_PORT:-51820}"
@@ -54,6 +48,7 @@ validate_inputs() {
 # Non-mutating mode used by CI and deploy preflight.
 if [[ "${WG_VALIDATE_ONLY:-0}" == "1" ]]; then
   validate_inputs
+  echo "WireGuard endpoint authority: ${ENDPOINT_HOST}:${PORT}"
   echo "WireGuard endpoint and port validated; no system changes made."
   exit 0
 fi
@@ -148,7 +143,7 @@ DNS = 1.1.1.1
 
 [Peer]
 PublicKey = ${SERVER_PUBLIC}
-Endpoint = ${WG_ENDPOINT}:${PORT}
+Endpoint = ${ENDPOINT_HOST}:${PORT}
 AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 EOF
@@ -186,7 +181,7 @@ if ! systemctl enable wg-quick@wg0 >/dev/null || ! systemctl restart wg-quick@wg
 fi
 
 wg show wg0 >/dev/null
-grep -Fq "Endpoint = ${WG_ENDPOINT}:${PORT}" /root/wireguard-clients/windows.conf
+grep -Fq "Endpoint = ${ENDPOINT_HOST}:${PORT}" /root/wireguard-clients/windows.conf
 for name in windows android iphone; do
   [[ -s "/root/wireguard-clients/${name}.conf" ]] || fail "Missing generated profile for ${name}."
   [[ "$(stat -c '%a' "/root/wireguard-clients/${name}.conf")" == "600" ]] || fail "Unsafe permissions on ${name} profile."
