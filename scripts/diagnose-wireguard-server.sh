@@ -22,26 +22,7 @@ iptables -t nat -C POSTROUTING -s 10.77.0.0/24 -o "$wan_if" -j MASQUERADE || fai
 
 iptables -C FORWARD -j FREEROUTE_FORWARD || fail "The restrictive FreeRoute forwarding chain is not attached."
 forward_rules="$(iptables -S FORWARD | grep '^-A FORWARD' || true)"
-first_forward_rule="${forward_rules%%
-for name in windows android iphone; do
-  file="/root/wireguard-clients/$name.conf"
-  [[ -s "$file" ]] || fail "Missing client profile: $name."
-  [[ "$(stat -c '%a' "$file")" == "600" ]] || fail "Client profile $name permissions are not 600."
-  grep -Fq 'Endpoint = ' "$file" || fail "Client profile $name has no endpoint."
-  ! grep -Fq 'REPLACE_WITH_PUBLIC_SERVER_IP' "$file" || fail "Client profile $name still has a placeholder endpoint."
-done
-
-peers="$(wg show wg0 peers | wc -l | tr -d ' ')"
-nat_rules="$(iptables -t nat -S POSTROUTING | grep -c -- '-s 10.77.0.0/24' || true)"
-echo "WireGuard service: active"
-echo "Enabled at boot: yes"
-echo "Listen port: UDP/$port"
-echo "Configured peers: $peers"
-echo "NAT rule count matching VPN subnet: $nat_rules"
-echo "IPv4 forwarding: enabled"
-echo "Client profiles: present with mode 600 (private contents not printed)"
-echo "Server-side checks passed. External reachability, client handshake, public IP, DNS and IPv6 leaks still require client-side tests."
-\\n'*}"
+first_forward_rule="${forward_rules%%$'\\n'*}"
 [[ "$first_forward_rule" == "-A FORWARD -j FREEROUTE_FORWARD" ]] || fail "The FreeRoute forwarding chain is not first; a prior rule could bypass its restrictions."
 jump_count="$(printf '%s\\n' "$forward_rules" | grep -Fc -- '-j FREEROUTE_FORWARD' || true)"
 [[ "$jump_count" == "1" ]] || fail "Expected exactly one jump to the FreeRoute forwarding chain."
@@ -56,8 +37,12 @@ expected_chain_rules="$(cat <<EOF
 -A FREEROUTE_FORWARD -i wg0 -d 169.254.0.0/16 -j DROP
 -A FREEROUTE_FORWARD -i wg0 -d 172.16.0.0/12 -j DROP
 -A FREEROUTE_FORWARD -i wg0 -d 192.0.0.0/24 -j DROP
+-A FREEROUTE_FORWARD -i wg0 -d 192.0.2.0/24 -j DROP
+-A FREEROUTE_FORWARD -i wg0 -d 192.88.99.0/24 -j DROP
 -A FREEROUTE_FORWARD -i wg0 -d 192.168.0.0/16 -j DROP
 -A FREEROUTE_FORWARD -i wg0 -d 198.18.0.0/15 -j DROP
+-A FREEROUTE_FORWARD -i wg0 -d 198.51.100.0/24 -j DROP
+-A FREEROUTE_FORWARD -i wg0 -d 203.0.113.0/24 -j DROP
 -A FREEROUTE_FORWARD -i wg0 -d 224.0.0.0/4 -j DROP
 -A FREEROUTE_FORWARD -i wg0 -d 240.0.0.0/4 -j DROP
 -A FREEROUTE_FORWARD -i wg0 -o $wan_if -j ACCEPT
@@ -67,6 +52,14 @@ EOF
 )"
 actual_chain_rules="$(iptables -S FREEROUTE_FORWARD)" || fail "Cannot inspect the FreeRoute forwarding chain."
 [[ "$actual_chain_rules" == "$expected_chain_rules" ]] || fail "The FreeRoute forwarding chain differs from the approved rule set; refusing to mark the server as secure."
+
+iptables -C INPUT -i wg0 -j DROP || fail "VPN clients are not blocked from host-local services."
+input_rules="$(iptables -S INPUT | grep '^-A INPUT' || true)"
+first_input_rule="${input_rules%%$'\\n'*}"
+[[ "$first_input_rule" == "-A INPUT -i wg0 -j DROP" ]] || fail "The VPN-client host-access block is not the first INPUT rule."
+input_drop_count="$(printf '%s\\n' "$input_rules" | grep -Fc -- '-i wg0 -j DROP' || true)"
+[[ "$input_drop_count" == "1" ]] || fail "Expected exactly one VPN-client host-access block.";
+
 
 for name in windows android iphone; do
   file="/root/wireguard-clients/$name.conf"
