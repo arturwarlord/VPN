@@ -1,0 +1,13 @@
+FreeRoute VPN for Windows — third-party software notices
+========================================================
+
+This package includes the official WireGuard for Windows engine, version 1.1.1, obtained from the official WireGuard download site:
+https://download.wireguard.com/windows-client/
+
+Project: https://git.zx2c4.com/wireguard-windows
+License: MIT
+Copyright (C) 2018-2026 WireGuard LLC. All Rights Reserved.
+
+The FreeRoute Windows interface and profile management are developed in this repository. The bundled WireGuard executable and required runtime files provide the tunnel engine.
+
+MIT license text:
