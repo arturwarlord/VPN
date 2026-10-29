@@ -6,8 +6,9 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 ## Current status
 
-- [x] Ubuntu/Debian WireGuard server bootstrap script.
-- [x] Manual GitHub Actions server-deployment workflow.
+- [x] Ubuntu/Debian WireGuard server bootstrap script with explicit endpoint validation, safe permissions and rollback if service startup fails.
+- [x] Manual GitHub Actions server-deployment workflow with verified SSH host-key pinning.
+- [x] Read-only server diagnostics that do not print private client profiles.
 - [x] Native Android client with local multi-profile management, connect/disconnect controls and an IPv6-route warning.
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
@@ -56,12 +57,21 @@ A working VPN exit node must be reachable from the internet and located outside 
 
 We have not confirmed a long-term free VPS that meets the budget, region and networking requirements. Oracle Cloud was not suitable in our setup, so it is not the next step. Until a free server is confirmed, we will not claim that country switching works.
 
-If a suitable Ubuntu/Debian VPS is eventually available, the existing deployment workflow can be used. It requires these repository Action secrets:
-- `VPN_HOST` — public IP or DNS name used for SSH.
-- `VPN_USER` — SSH account able to run sudo non-interactively.
-- `VPN_SSH_KEY` — private SSH key. Never commit it.
+### Prepare deployment only after a suitable free server is confirmed
 
-The manual workflow is **Actions → Deploy WireGuard VPN → Run workflow**. The server must be reachable over SSH, and its firewall must allow UDP/51820. Do not run the workflow until the host and SSH access have been verified.
+The manual workflow is **Actions → Deploy WireGuard VPN → Run workflow**. It requires these repository Action secrets:
+- `VPN_HOST` — server hostname or IP used for SSH.
+- `VPN_USER` — SSH account allowed to run `sudo -n`.
+- `VPN_SSH_KEY` — SSH private key. Never commit it.
+- `VPN_KNOWN_HOSTS` — the server's known_hosts line, with its public host key verified independently through the provider's console or trusted documentation.
+
+The deploy workflow deliberately does **not** trust a fresh `ssh-keyscan` result as proof of identity: that would accept a potential man-in-the-middle key. Verify the server host-key fingerprint out-of-band, then save the matching known_hosts line as `VPN_KNOWN_HOSTS`.
+
+The workflow validates the endpoint as a globally routable IPv4 address, checks non-interactive SSH sudo access, and installs WireGuard. The server's provider firewall must allow the configured UDP port (default 51820). Do not run the workflow before the host, SSH access and firewall have been verified.
+
+After deployment, use **Actions → Diagnose WireGuard server → Run workflow**. The read-only workflow checks service status, boot enablement, forwarding, config permissions and the three generated client profiles. It intentionally does not print profile contents or private keys. A successful server diagnostic still cannot prove the UDP port is reachable from every network or that a client has completed a handshake.
+
+See [server deployment and security notes](docs/SERVER_DEPLOYMENT.md).
 
 ## Keep VPN profiles private
 
@@ -69,8 +79,8 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 
 ## Security and testing limitations
 
-- The initial server script is IPv4-focused; full IPv6 tunneling and leak prevention are not complete.
-- A warning about a missing IPv6 default route is not a guarantee against leaks. Server-side IPv6 routing, DNS behavior and kill-switch behavior still need testing.
+- The server setup currently tunnels IPv4 only; full IPv6 tunneling is not configured. Client apps warn when a profile has no IPv6 default route, but that warning is not a complete leak-prevention mechanism.
+- DNS behavior, server routing and kill-switch behavior still need end-to-end testing.
 - No country selector backed by real servers exists yet. Imported profile names are labels only.
 - Android sleep/resume and POCO battery restrictions have not been verified on the user's phone.
 - A VPN does not guarantee that every website accepts a country: some services also check account region, cookies, payment method or other signals.
@@ -85,9 +95,11 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `docs/ANDROID_CLIENT.md` — Android client notes.
 - `docs/WINDOWS_CLIENT.md` — Windows client notes.
 - `docs/IOS_CLIENT.md` — iOS client notes.
+- `docs/SERVER_DEPLOYMENT.md` — deployment requirements and SSH pinning.
 - `scripts/setup-wireguard.sh` — server bootstrap script.
 - `.github/workflows/android-client.yml` — Android debug APK build.
 - `.github/workflows/windows-client.yml` — Windows package build.
 - `.github/workflows/ios-client.yml` — unsigned iOS build.
 - `.github/workflows/ci.yml` — syntax, required-file and secret-material checks.
-- `.github/workflows/deploy.yml` — manual server deployment over SSH.
+- `.github/workflows/deploy.yml` — manual server deployment over pinned SSH.
+- `.github/workflows/diagnose-server.yml` — read-only server diagnosis.
