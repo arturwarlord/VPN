@@ -1,6 +1,7 @@
 name: Build FreeRoute iOS app
 
 on:
+  workflow_call:
   push:
     branches: [main]
     paths:
