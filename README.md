@@ -15,7 +15,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
 - [x] iOS SwiftUI app and Packet Tunnel extension compile successfully as an unsigned build in GitHub Actions.
-- [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, runs 24 endpoint-validation tests and verifies firewall-hook rule ordering and cleanup.
+- [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, runs 24 endpoint-validation cases, verifies IPv4 firewall-hook rule ordering, checks deployment safety, and validates the IPv6 fail-closed profile/server policy.
 - [x] iOS tunnel configuration is stored in a shared Keychain group; VPN preferences retain only a Keychain reference. The app avoids overwriting unrelated VPN profiles.
 - [x] Android, Windows and iPhone clients include an opt-in check of the current public IP and estimated exit country. The check sends the current IP to `ipwho.is` only after the user presses the button; it does not save the result.
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
@@ -26,7 +26,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 The VPN service is **not live yet**. No server has been provisioned or deployed. The country websites see is determined by the remote server's network location, not by a label in the app.
 
-Latest repository validation (24 endpoint tests plus ordered firewall-policy tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
+Latest repository validation (24 endpoint-validation cases, firewall-policy, deployment-safety and IPv6 fail-closed regression tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
 
 ## Android client
 
