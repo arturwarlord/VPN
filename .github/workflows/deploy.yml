@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       endpoint_ip:
-        description: Public IPv4 address of the VPS outside Russia
+        description: Public IPv4 or IPv6 address of the VPS outside Russia
         required: true
         type: string
       port:
@@ -49,10 +49,34 @@ jobs:
           try:
               endpoint = ipaddress.ip_address(sys.argv[1])
           except ValueError:
-              raise SystemExit("endpoint_ip must be a valid public IPv4 address.")
+              raise SystemExit("endpoint_ip must be a valid IPv4 or IPv6 address.")
 
-          if not isinstance(endpoint, ipaddress.IPv4Address) or not endpoint.is_global:
-              raise SystemExit("endpoint_ip must be a public, globally routable IPv4 address.")
+          blocked_ipv4_ranges = (
+              "100.64.0.0/10",
+              "192.0.0.0/24",
+              "192.0.2.0/24",
+              "192.88.99.0/24",
+              "198.18.0.0/15",
+              "198.51.100.0/24",
+              "203.0.113.0/24",
+          )
+          is_blocked_v4_special = (
+              isinstance(endpoint, ipaddress.IPv4Address)
+              and any(endpoint in ipaddress.ip_network(network) for network in blocked_ipv4_ranges)
+          )
+          if (
+              not endpoint.is_global
+              or endpoint.is_private
+              or endpoint.is_loopback
+              or endpoint.is_link_local
+              or endpoint.is_multicast
+              or endpoint.is_reserved
+              or endpoint.is_unspecified
+              or is_blocked_v4_special
+          ):
+              raise SystemExit("endpoint_ip must be a globally routable public unicast IPv4 or IPv6 address.")
+          if isinstance(endpoint, ipaddress.IPv6Address) and endpoint.ipv4_mapped is not None:
+              raise SystemExit("Use the IPv4 address directly instead of an IPv4-mapped IPv6 address.")
 
           try:
               port = int(sys.argv[2], 10)
@@ -75,6 +99,7 @@ jobs:
             "https://ipwho.is/$ENDPOINT_IP?fields=success,ip,country,country_code" \
             --output "$RUNNER_TEMP/endpoint-geo.json"
           python3 - "$RUNNER_TEMP/endpoint-geo.json" "$ENDPOINT_IP" <<'PY'
+          import ipaddress
           import json
           import sys
 
@@ -83,7 +108,13 @@ jobs:
 
           if response.get("success") is not True:
               raise SystemExit("Geolocation service could not verify this endpoint; refusing deployment.")
-          if response.get("ip") != sys.argv[2]:
+          try:
+              requested_ip = ipaddress.ip_address(sys.argv[2])
+              response_ip = ipaddress.ip_address(str(response.get("ip", "")))
+          except ValueError:
+              raise SystemExit("Geolocation service returned an invalid IP; refusing deployment.")
+
+          if response_ip != requested_ip:
               raise SystemExit("Geolocation response did not match the requested endpoint; refusing deployment.")
 
           country_code = str(response.get("country_code", "")).upper()

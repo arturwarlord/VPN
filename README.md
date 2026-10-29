@@ -10,14 +10,14 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 - [x] Ubuntu/Debian WireGuard server bootstrap script with explicit endpoint validation, safe permissions and rollback if service startup fails.
 - [x] Server installer builds a restrictive IPv4 forwarding chain: internet-only egress, private/reserved-range filtering, and no access from VPN clients to services on the VPN host.
-- [x] 24 automated endpoint-validation tests for malformed, private, local, special-purpose and otherwise non-public addresses/ports.
+- [x] 34 automated endpoint-validation cases for IPv4/IPv6 publicness, special-purpose addresses, canonical formatting and UDP ports.
 - [x] Manual GitHub Actions server-deployment workflow with verified SSH host-key pinning.
 - [x] Read-only server diagnostics that do not print private client profiles.
 - [x] Native Android client with local multi-profile management, connect/disconnect controls and an IPv6-route warning.
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
 - [x] iOS SwiftUI app and Packet Tunnel extension compile successfully as an unsigned build in GitHub Actions.
-- [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, runs 24 endpoint-validation cases, verifies IPv4 firewall-hook rule ordering, checks deployment safety, and validates the IPv6 fail-closed profile/server policy.
+- [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, runs 34 endpoint-validation cases, verifies IPv4 firewall-hook rule ordering, checks deployment safety, and validates the IPv6 fail-closed profile/server policy.
 - [x] iOS tunnel configuration is stored in a shared Keychain group; VPN preferences retain only a Keychain reference. The app avoids overwriting unrelated VPN profiles.
 - [x] Android, Windows and iPhone clients include an opt-in check of the current public IP and estimated exit country. The check sends the current IP to `ipwho.is` only after the user presses the button; it does not save the result.
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
@@ -28,7 +28,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 The VPN service is **not live yet**. No server has been provisioned or deployed. The country websites see is determined by the remote server's network location, not by a label in the app.
 
-Latest repository validation (24 endpoint-validation cases, firewall-policy, deployment-safety and IPv6 fail-closed regression tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
+Latest repository validation (34 endpoint-validation cases, firewall-policy, deployment-safety and IPv6 fail-closed regression tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
 
 ## Android client
 
@@ -80,7 +80,7 @@ The manual workflow is **Actions → Deploy WireGuard VPN → Run workflow**. It
 
 The deploy workflow deliberately does **not** trust a fresh `ssh-keyscan` result as proof of identity: that would accept a potential man-in-the-middle key. Verify the server host-key fingerprint out-of-band, then save the matching known_hosts line as `VPN_KNOWN_HOSTS`.
 
-The workflow validates the endpoint as a globally routable IPv4 address, checks non-interactive SSH sudo access, and installs WireGuard. The server's provider firewall must allow the configured UDP port (default 51820). Do not run the workflow before the host, SSH access and firewall have been verified.
+The workflow validates the endpoint as a globally routable IPv4 or IPv6 address outside Russia, checks non-interactive SSH sudo access, and installs WireGuard. The server must still have a working IPv4 default route/NAT for IPv4 egress, and the provider firewall must allow the configured UDP port (default 51820) on the endpoint's IP family. IPv6-only internet egress is not enabled yet. Do not run the workflow before the host, SSH access and firewall have been verified.
 
 After deployment, use **Actions → Diagnose WireGuard server → Run workflow**. The read-only workflow checks service status, boot enablement, forwarding, config permissions and the three generated client profiles. It intentionally does not print profile contents or private keys. A successful server diagnostic still cannot prove the UDP port is reachable from every network or that a client has completed a handshake.
 

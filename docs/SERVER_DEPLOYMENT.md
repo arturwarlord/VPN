@@ -6,7 +6,7 @@ This guide describes what must be in place before using the automated server wor
 
 A suitable host needs:
 - Ubuntu or Debian with root access (or an SSH user that can run non-interactive sudo).
-- A globally routable public IPv4 address outside Russia.
+- A globally routable public IPv4 or IPv6 address outside Russia.
 - Permission to receive UDP on the chosen WireGuard port (default 51820) in both the host firewall and the provider/network firewall.
 - Enough outbound traffic allowance for your expected use, with no automatic conversion to paid service that would violate the budget.
 - Stable availability, kernel support for WireGuard and a way to verify SSH host identity.
@@ -36,22 +36,22 @@ Obtain the server's SSH host-key fingerprint or public host key from the provide
 
 After the free server and its network firewall are confirmed:
 1. Open **Actions → Deploy WireGuard VPN → Run workflow**.
-2. Enter the server's public IPv4 address as `endpoint_ip` and the allowed UDP port.
+2. Enter the server's public IPv4 or IPv6 address as `endpoint_ip` and the allowed UDP port.
 3. Review the run. It first verifies the pinned SSH host key and non-interactive sudo before sending the installer.
 
 Before SSH deployment, the workflow queries the free HTTPS geolocation endpoint `ipwho.is` for the provided public endpoint and refuses deployment if the reported country is Russia or the API cannot return a valid matching IP/country. This is a best-effort database lookup, not cryptographic proof of the server's location. Cross-check the provider's region and verify the actual exit IP from a connected client. This lookup sends the already-public endpoint IP to that third-party API; see [its documentation](https://ipwhois.io/ru/documentation).
 
 The installer:
-- Refuses to proceed without a valid explicit public IPv4 endpoint and valid port.
+- Refuses to proceed without a valid explicit public IPv4 or IPv6 endpoint and valid port.
 - Refuses to overwrite an existing `/etc/wireguard/wg0.conf` unless it carries the FreeRoute managed marker and contains exactly the three managed `windows`, `android` and `iphone` peers. It refuses to replace a managed config containing custom peers.
 - Generates the WireGuard server key and client keys on the server.
 - Stores client profiles in `/root/wireguard-clients/` with mode 600.
 - Writes the candidate configuration atomically, backs up an existing FreeRoute-managed config before replacement, and attempts to restore the backup if WireGuard fails to start.
 - Enables and starts `wg-quick@wg0`, and confirms the interface is active.
 
-This setup currently enables IPv4 forwarding/NAT and generates client profiles with `AllowedIPs = 0.0.0.0/0`. It installs a dedicated `FREEROUTE_FORWARD` chain at the top of the host `FORWARD` chain: only public-internet traffic from `wg0` to the detected WAN interface is accepted; client traffic to private, loopback, link-local, carrier-grade NAT, documentation, benchmarking, multicast and reserved IPv4 ranges is dropped; forwarding to every other interface and unsolicited traffic into `wg0` is dropped. A separate first-position `INPUT` rule blocks VPN clients from reaching services on the VPN host itself. The installer refuses to flush an existing chain unless its FreeRoute ownership marker is present.
+The outer WireGuard endpoint may now be a globally routable IPv4 or IPv6 literal. IPv6 literals are normalized and bracketed in generated profiles (for example, `Endpoint = [2606:4700:4700::1111]:51820`). The server still requires a working IPv4 default route and NAT for IPv4 internet egress. The installer enables IPv4 forwarding/NAT and generates client profiles with `AllowedIPs = 0.0.0.0/0, ::/0`. It installs a dedicated `FREEROUTE_FORWARD` chain at the top of the host `FORWARD` chain: only public-internet traffic from `wg0` to the detected WAN interface is accepted; client traffic to private, loopback, link-local, carrier-grade NAT, documentation, benchmarking, multicast and reserved IPv4 ranges is dropped; forwarding to every other interface and unsolicited traffic into `wg0` is dropped. A separate first-position `INPUT` rule blocks VPN clients from reaching services on the VPN host itself. The installer refuses to flush an existing chain unless its FreeRoute ownership marker is present.
 
-This is server-side IPv4 isolation, not a full client kill switch. The setup does not configure server-side IPv6 forwarding; clients warn when the profile lacks an IPv6 default route, but that warning does not prevent every possible IPv6 leak. DNS behavior, IPv6 behavior, provider firewall reachability and on-device routing still require end-to-end tests. Do not use it for sensitive traffic until those tests have passed.
+This server-side isolation is not a full client kill switch. Generated profiles route IPv4 and IPv6 defaults through WireGuard; until native IPv6 egress is implemented, the server deliberately blocks IPv6 forwarding and VPN-client access to server services. IPv6-only sites will therefore be unavailable while connected. This does not prevent traffic from returning to the normal network if the tunnel drops; DNS behavior, provider firewall reachability and on-device routing still require end-to-end tests. Do not use it for sensitive traffic until those tests have passed.
 
 ## Diagnose
 
@@ -75,7 +75,7 @@ After transferring one profile through an authenticated private channel:
 4. Run DNS leak and IPv6 leak tests. A successful handshake alone does not establish that all traffic is routed through the tunnel.
 5. Repeat on a second network (for example Wi-Fi and mobile data) and after the phone resumes from sleep.
 
-The initial server config is IPv4-only. Until IPv6 routing or a verified client-side fail-closed policy exists, never describe IPv6 leak protection as complete.
+The outer transport can use IPv6 when the server has a reachable public IPv6 address and its firewall allows the configured UDP port. Inner IPv6 internet egress remains intentionally blocked until a separate, tested native IPv6 egress policy is implemented. An IPv6 endpoint alone does not provide IPv4 egress; the server must still have working IPv4 routing/NAT for IPv4 websites.
 
 ## Rollback and recovery
 
