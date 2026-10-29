@@ -10,10 +10,17 @@ systemctl is-enabled --quiet wg-quick@wg0 || fail "wg-quick@wg0 is not enabled a
 grep -Fq '# FreeRoute managed WireGuard configuration' /etc/wireguard/wg0.conf || fail "Config is not marked as FreeRoute-managed."
 [[ "$(stat -c '%a' /etc/wireguard/wg0.conf)" == "600" ]] || fail "Server config permissions are not 600."
 [[ "$(sysctl -n net.ipv4.ip_forward)" == "1" ]] || fail "IPv4 forwarding is disabled."
+command -v iptables >/dev/null || fail "iptables is not installed."
 
 port="$(wg show wg0 listen-port)"
 [[ "$port" =~ ^[0-9]+$ ]] && (( port >= 1 && port <= 65535 )) || fail "Cannot read active WireGuard listen port."
 wg show wg0 >/dev/null || fail "WireGuard did not return interface status."
+
+wan_if="$(ip -4 route show default | awk 'NR==1 {print $5}')"
+[[ -n "$wan_if" ]] || fail "Cannot detect the default IPv4 interface."
+iptables -t nat -C POSTROUTING -s 10.77.0.0/24 -o "$wan_if" -j MASQUERADE || fail "VPN subnet NAT rule is missing."
+iptables -C FORWARD -i wg0 -j ACCEPT || fail "Incoming WireGuard forwarding rule is missing."
+iptables -C FORWARD -o wg0 -j ACCEPT || fail "Outgoing WireGuard forwarding rule is missing."
 
 for name in windows android iphone; do
   file="/root/wireguard-clients/$name.conf"
