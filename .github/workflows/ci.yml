@@ -34,8 +34,14 @@ jobs:
           test -s windows/FreeRoute.Windows.csproj
           test -s windows/MainForm.cs
           test -s docs/WINDOWS_CLIENT.md
+          test -s ios/project.yml
+          test -s ios/App/ContentView.swift
+          test -s ios/PacketTunnel/PacketTunnelProvider.swift
+          test -s ios/Shared/TunnelConfiguration+WgQuickConfig.swift
+          test -s docs/ANDROID_CLIENT.md
           grep -q workflow_dispatch .github/workflows/deploy.yml
           grep -q assembleDebug .github/workflows/android-client.yml
+          grep -q 'WireGuardKitGo' .github/workflows/ios-client.yml
 
       - name: Check tracked files for private key material
         shell: bash
