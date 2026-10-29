@@ -53,6 +53,34 @@ The important gap is network compatibility: the published summary does not clear
 
 Official reference: https://vyce.cloud/
 
+### AlaVPS Free VPS — rejected as a permanent zero-cost host
+
+The current official site advertises root SSH, KVM, a dedicated IPv4 and IPv6, but also states the free instance is a promotional trial, typically **1–3 months**, and asks for a credit card for verification. It is not a long-term guaranteed free exit server under the project's rules, so do not create it for FreeRoute.
+
+Official reference: https://alavps.com/ (FAQ and pricing sections)
+
+### EUserv VS2-free — possible lab, not a dependable exit node
+
+The official plan describes a Linux container, 1 vCPU at 1 GHz, 1 GB RAM, 10 GB HDD, one IPv6 address and no included IPv4. The contract term is one month with manual renewal; the provider's forum support confirmed that renewal cannot be automated and the server goes down if it is missed. That conflicts with unattended availability. Container networking and WireGuard/iptables behavior would also need a disposable compatibility test before it could even be considered for temporary use.
+
+Official references:
+- Plan: https://www.euserv.com/en/virtual-private-server/root-vserver/v2/vs2-free.php
+- Renewal support answer: https://forum.euserv.com/index.php?topic=10932.0
+
+### Zendevz — rejected for this project
+
+The official site says the service is Bangladesh-only and in open beta/early alpha, and explicitly advises against business-critical production workloads. Its public-subdomain/HTTPS routing is not proof that a raw inbound WireGuard UDP endpoint can be mapped. Do not route personal traffic through a provider that is not production-ready and has not confirmed UDP behavior.
+
+Official reference: https://www.zendevz.com/
+
+### GAP Cloud free MicroVM — short-lived test environment only
+
+The official free MicroVM page offers a one-hour build window and a 24-hour claim window, after which the trial VM/disk is removed if it is not claimed. Its documentation also says outbound access is limited to approved package registries and arbitrary internet access is blocked. This makes it unsuitable as an internet exit server.
+
+Official references:
+- https://gap.geta.team/free-vm
+- https://gap.geta.team/docs
+
 ### GratisVPS.net — rejected for sensitive VPN traffic
 
 The site advertises free KVM VPS resources, but its own Terms of Service call the service an "As-Is Beta", say the provider may suspend or terminate any aspect at any time without notice, and disclaim service/security/uptime warranties. Its free plan also advertises a shared IPv4 and a dedicated IPv6 rather than a dedicated IPv4.
