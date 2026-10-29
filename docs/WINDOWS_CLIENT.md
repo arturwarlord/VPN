@@ -18,3 +18,8 @@ The executable requests administrator permissions because Windows VPN network ad
 - The country check sends the current public IP to the geolocation service. If the tunnel fails during the request, it may observe the normal connection IP; the result is only an estimate.
 
 See [third-party notices](../windows/THIRD_PARTY_NOTICES.txt) for engine attribution and licensing.
+
+
+## IPv6 behavior in generated FreeRoute profiles
+
+Generated profiles route both IPv4 and IPv6 defaults into WireGuard. The current server deliberately blocks IPv6 forwarding and host access; IPv6-only destinations will not load until native IPv6 egress is implemented. The route indicator confirms only that the profile contains `::/0`; it does not prove IPv6 internet reachability or provide a Windows kill switch.
