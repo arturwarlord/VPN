@@ -64,6 +64,7 @@ jobs:
           grep -q 'previousReference' ios/App/ContentView.swift
           grep -q 'diagnose-wireguard-server.sh' .github/workflows/diagnose-server.yml
           grep -q workflow_dispatch .github/workflows/deploy.yml
+          grep -q 'WG_VALIDATE_ONLY=1' .github/workflows/deploy.yml
           grep -q 'VPN_KNOWN_HOSTS' .github/workflows/deploy.yml
           ! grep -q 'ssh-keyscan' .github/workflows/deploy.yml
           grep -q 'StrictHostKeyChecking=yes' .github/workflows/deploy.yml
