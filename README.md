@@ -96,6 +96,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `docs/WINDOWS_CLIENT.md` — Windows client notes.
 - `docs/IOS_CLIENT.md` — iOS client notes.
 - `docs/SERVER_DEPLOYMENT.md` — deployment requirements and SSH pinning.
+- `docs/FREE_HOST_RESEARCH.md` — free-server candidates reviewed and reasons none is approved yet.
 - `scripts/setup-wireguard.sh` — server bootstrap script.
 - `.github/workflows/android-client.yml` — Android debug APK build.
 - `.github/workflows/windows-client.yml` — Windows package build.
