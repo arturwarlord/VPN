@@ -14,13 +14,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Check shell syntax
         run: bash -n scripts/setup-wireguard.sh
-      - name: Check required files
+
+      - name: Check required project files
+        shell: bash
         run: |
+          set -euo pipefail
           test -s README.md
           test -s scripts/setup-wireguard.sh
+          test -s settings.gradle.kts
+          test -s app/build.gradle.kts
+          test -s app/src/main/AndroidManifest.xml
+          test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          test -s docs/ANDROID_CLIENT.md
           grep -q workflow_dispatch .github/workflows/deploy.yml
+          grep -q assembleDebug .github/workflows/android-client.yml
+
       - name: Check tracked files for private key material
         shell: bash
         run: |
