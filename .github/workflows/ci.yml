@@ -1,0 +1,30 @@
+name: Validate VPN project
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell syntax
+        run: bash -n scripts/setup-wireguard.sh
+      - name: Check required files
+        run: |
+          test -s README.md
+          test -s scripts/setup-wireguard.sh
+          grep -q workflow_dispatch .github/workflows/deploy.yml
+      - name: Check tracked files for private key material
+        shell: bash
+        run: |
+          if git grep -n -E 'BEGIN (OPENSSH|RSA|EC) PRIVATE KEY|PrivateKey[[:space:]]*=' -- ':!scripts/setup-wireguard.sh' ':!README.md'; then
+            echo "Potential private key material detected in tracked files." >&2
+            exit 1
+          fi
