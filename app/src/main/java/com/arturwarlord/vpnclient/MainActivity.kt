@@ -15,6 +15,7 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Spinner
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.wireguard.android.backend.GoBackend
@@ -148,6 +149,10 @@ class MainActivity : Activity() {
         disconnectButton = makeButton("Отключить", Color.rgb(74, 83, 104))
         disconnectButton.setOnClickListener { disconnect() }
         root.addView(disconnectButton, buttonLayout())
+
+        val licensesButton = makeButton("О лицензиях", Color.rgb(36, 48, 71))
+        licensesButton.setOnClickListener { showLicenses() }
+        root.addView(licensesButton, buttonLayout())
 
         val note = TextView(this).apply {
             text = "Каждый профиль хранится только на этом устройстве. Имя профиля можно использовать для обозначения страны, но фактическая страна выхода определяется удалённым сервером."
@@ -386,6 +391,36 @@ class MainActivity : Activity() {
         profileSpinner.isEnabled = canEdit && savedProfiles.isNotEmpty()
         connectButton.isEnabled = profile != null && canEdit
         disconnectButton.isEnabled = isConnected && !isBusy
+    }
+
+    private fun showLicenses() {
+        val licenseText = try {
+            assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } catch (_: Exception) {
+            "Не удалось открыть сведения о лицензиях. Исходный текст доступен в репозитории FreeRoute VPN."
+        }
+        val body = TextView(this).apply {
+            text = licenseText
+            textSize = 12f
+            setTextColor(Color.DKGRAY)
+            setTextIsSelectable(true)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            addView(
+                body,
+                ScrollView.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            )
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Открытые лицензии")
+            .setView(scroll)
+            .setPositiveButton("Закрыть", null)
+            .show()
     }
 
     private fun makeButton(label: String, color: Int): Button =
