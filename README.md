@@ -15,7 +15,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
 - [x] iOS SwiftUI app and Packet Tunnel extension compile successfully as an unsigned build in GitHub Actions.
-- [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, runs 24 endpoint-validation tests and verifies firewall-hook rule ordering and cleanup.
+- [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, runs 24 endpoint-validation cases, verifies IPv4 firewall-hook rule ordering, checks deployment safety, and validates the IPv6 fail-closed profile/server policy.
 - [x] iOS tunnel configuration is stored in a shared Keychain group; VPN preferences retain only a Keychain reference. The app avoids overwriting unrelated VPN profiles.
 - [x] Android, Windows and iPhone clients include an opt-in check of the current public IP and estimated exit country. The check sends the current IP to `ipwho.is` only after the user presses the button; it does not save the result.
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
@@ -26,7 +26,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 The VPN service is **not live yet**. No server has been provisioned or deployed. The country websites see is determined by the remote server's network location, not by a label in the app.
 
-Latest repository validation (24 endpoint tests plus ordered firewall-policy tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
+Latest repository validation (24 endpoint-validation cases, firewall-policy, deployment-safety and IPv6 fail-closed regression tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
 
 ## Android client
 
@@ -90,7 +90,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 
 ## Security and testing limitations
 
-- The server firewall restricts IPv4 forwarding to public internet egress and blocks VPN-client access to private/reserved IPv4 ranges and host services. The setup still does not route IPv6; the client warning is not a complete leak-prevention mechanism.
+- Client profiles include IPv4 and IPv6 default routes. Until native IPv6 egress is implemented, the server explicitly blocks IPv6 forwarding and VPN-client access to server services. IPv6-only destinations therefore remain unavailable while connected. This is fail-closed server routing, not an OS-level kill switch; disconnect behavior and DNS/IP leak prevention still require real-device tests.
 - DNS behavior, server routing and kill-switch behavior still need end-to-end testing.
 - No country selector backed by real servers exists yet. Imported profile names are labels only.
 - Android sleep/resume and POCO battery restrictions have not been verified on the user's phone.

@@ -1,6 +1,6 @@
 # Free VPN exit-server research
 
-**Last checked:** 29 October 2026  
+**Last checked:** 30 October 2026  
 **Hard requirement:** EUR 0/month, server outside Russia, WireGuard/root networking support, public reachability and no automatic conversion to a paid plan. A candidate is not approved just because its homepage says "free."
 
 ## Decision summary
@@ -45,6 +45,14 @@ Official references:
 - https://aws.amazon.com/free/
 - https://aws.amazon.com/free/free-tier-faqs/
 
+### vyce.cloud VPS-Mini — interesting, but not an approved endpoint yet
+
+The provider currently advertises a $0 VPS-Mini with 1 CPU, 2 GB RAM, 6 GB storage, root SSH access, a public IPv6 address, and 20 ports (one reserved for SSH). Free capacity is limited, and the account needs a GitHub account at least 30 days old. The dashboard requires renewal; a stopped instance is deleted after three days if not renewed.
+
+The important gap is network compatibility: the published summary does not clearly confirm that an inbound UDP port can be reached over IPv4, while the current FreeRoute deployment workflow accepts only a public IPv4 endpoint. An IPv6-only server would require a separate, audited IPv6-endpoint deployment path and testing from all target networks. Do not provision or send traffic to it yet; first establish the exact UDP port-forwarding behavior, acceptable-use terms for a private personal WireGuard server, and reliable no-cost renewal.
+
+Official reference: https://vyce.cloud/
+
 ### GratisVPS.net — rejected for sensitive VPN traffic
 
 The site advertises free KVM VPS resources, but its own Terms of Service call the service an "As-Is Beta", say the provider may suspend or terminate any aspect at any time without notice, and disclaim service/security/uptime warranties. Its free plan also advertises a shared IPv4 and a dedicated IPv6 rather than a dedicated IPv4.
@@ -77,6 +85,12 @@ That does not satisfy a permanently online service without manual renewal or a s
 Official reference: https://switched.cloud/
 
 ### Openworld — not approved for unattended service
+
+The current official FAQ confirms NAT IPv4 plus a dedicated public IPv6 address, but free VPS periods last seven days and must be renewed once every 24 hours to reset their countdown. Its current terms prohibit operating open proxies or VPNs for malicious purposes; they do not clearly say that a private personal VPN is categorically banned. Even so, renewal requirements conflict with the project's fully unattended objective, and the endpoint's IPv6-/NAT-based networking still needs a verified UDP reachability test.
+
+Official references: https://openworld.eu.org/faq and https://openworld.eu.org/tos
+
+
 
 The free plan includes NAT IPv4 and a dedicated public IPv6 address, but instances must be renewed every seven days and automatically suspend when the renewal is missed. That conflicts with fully automated always-on operation. https://openworld.eu.org/faq
 

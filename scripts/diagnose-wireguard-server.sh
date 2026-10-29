@@ -5,6 +5,7 @@ fail() { echo "SERVER CHECK FAILED: $*" >&2; exit 1; }
 
 command -v wg >/dev/null || fail "wireguard-tools is not installed."
 command -v iptables >/dev/null || fail "iptables is not installed."
+command -v ip6tables >/dev/null || fail "ip6tables is not installed."
 command -v ip >/dev/null || fail "iproute2 is not installed."
 systemctl is-active --quiet wg-quick@wg0 || fail "wg-quick@wg0 is not active."
 systemctl is-enabled --quiet wg-quick@wg0 || fail "wg-quick@wg0 is not enabled at boot."
@@ -12,6 +13,7 @@ systemctl is-enabled --quiet wg-quick@wg0 || fail "wg-quick@wg0 is not enabled a
 grep -Fq '# FreeRoute managed WireGuard configuration' /etc/wireguard/wg0.conf || fail "Config is not marked as FreeRoute-managed."
 [[ "$(stat -c '%a' /etc/wireguard/wg0.conf)" == "600" ]] || fail "Server config permissions are not 600."
 [[ "$(sysctl -n net.ipv4.ip_forward)" == "1" ]] || fail "IPv4 forwarding is disabled."
+grep -Fq "Address = 10.77.0.1/24, fd4b:8d2c:6a91::1/64" /etc/wireguard/wg0.conf || fail "Server IPv6 tunnel address is missing."
 
 port="$(wg show wg0 listen-port)"
 [[ "$port" =~ ^[0-9]+$ ]] && (( port >= 1 && port <= 65535 )) || fail "Cannot read active WireGuard listen port."
@@ -20,6 +22,13 @@ wg show wg0 >/dev/null || fail "WireGuard did not return interface status."
 wan_if="$(ip -4 route show default | awk 'NR==1 {print $5}')"
 [[ -n "$wan_if" ]] || fail "Cannot detect the default IPv4 interface."
 iptables -t nat -C POSTROUTING -s 10.77.0.0/24 -o "$wan_if" -j MASQUERADE || fail "VPN subnet NAT rule is missing."
+ip6tables -C FORWARD -i wg0 -j DROP || fail "IPv6 forwarding from VPN clients is not blocked."
+ip6tables -C INPUT -i wg0 -j DROP || fail "IPv6 access from VPN clients to host services is not blocked."
+
+ipv6_forward_first="$(ip6tables -S FORWARD | grep -m1 '^-A FORWARD' || true)"
+[[ "$ipv6_forward_first" == "-A FORWARD -i wg0 -j DROP" ]] || fail "IPv6 VPN-client forwarding block is not first in FORWARD."
+ipv6_input_first="$(ip6tables -S INPUT | grep -m1 '^-A INPUT' || true)"
+[[ "$ipv6_input_first" == "-A INPUT -i wg0 -j DROP" ]] || fail "IPv6 VPN-client host-access block is not first in INPUT."
 
 # The restrictive chain must be the first FORWARD rule so later ACCEPT rules cannot bypass it.
 forward_rules="$(iptables -S FORWARD | grep '^-A FORWARD' || true)"
@@ -62,11 +71,15 @@ input_drop_count="$(printf '%s\n' "$input_rules" | grep -Fc -- '-i wg0 -j DROP' 
 [[ "$input_drop_count" == "1" ]] || fail "Expected exactly one VPN-client host-access block."
 
 for name in windows android iphone; do
+  case "$name" in windows) octet=2 ;; android) octet=3 ;; iphone) octet=4 ;; esac
   file="/root/wireguard-clients/$name.conf"
   [[ -s "$file" ]] || fail "Missing client profile: $name."
   [[ "$(stat -c '%a' "$file")" == "600" ]] || fail "Client profile $name permissions are not 600."
   grep -Fq 'Endpoint = ' "$file" || fail "Client profile $name has no endpoint."
   ! grep -Fq 'REPLACE_WITH_PUBLIC_SERVER_IP' "$file" || fail "Client profile $name still has a placeholder endpoint."
+  grep -Fq "Address = 10.77.0.${octet}/32, fd4b:8d2c:6a91::${octet}/128" "$file" || fail "Client profile $name lacks its IPv6 tunnel address."
+  grep -Fq "AllowedIPs = 0.0.0.0/0, ::/0" "$file" || fail "Client profile $name does not route IPv4 and IPv6 defaults through WireGuard."
+  grep -Fq "AllowedIPs = 10.77.0.${octet}/32, fd4b:8d2c:6a91::${octet}/128" /etc/wireguard/wg0.conf || fail "Server peer $name lacks its IPv6 tunnel address."
 done
 
 peers="$(wg show wg0 peers | wc -l | tr -d ' ')"
@@ -77,6 +90,7 @@ echo "Listen port: UDP/$port"
 echo "Configured peers: $peers"
 echo "NAT rule count matching VPN subnet: $nat_rules"
 echo "IPv4 forwarding: enabled"
+echo "IPv6 fail-closed: VPN client IPv6 forwarding and host access are blocked."
 echo "Private/reserved IPv4 destinations are blocked from VPN clients."
 echo "VPN clients cannot forward to other interfaces or access services on the VPN host."
 echo "Client profiles: present with mode 600 (private contents not printed)"

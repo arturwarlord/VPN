@@ -37,3 +37,8 @@ An unsigned app cannot be installed as a functional VPN app on a personal iPhone
 - Imported `.conf` files still exist locally in the app's protected sandbox; the app excludes the Profiles directory from ordinary backup, but users should delete profiles when they no longer need them.
 
 The embedded tunnel engine is WireGuardKit, licensed under MIT. See `ios/Resources/THIRD_PARTY_NOTICES.txt`.
+
+
+## IPv6 behavior in generated FreeRoute profiles
+
+Generated profiles include a private ULA IPv6 tunnel address and the `::/0` route. The current server intentionally blocks IPv6 forwarding and host access, so IPv6-only destinations are unavailable while connected. The app's route warning detects profile configuration only; it does not prove IPv6 internet egress or provide a device-level kill switch.

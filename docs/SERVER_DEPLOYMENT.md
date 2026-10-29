@@ -85,3 +85,14 @@ If deployment fails, inspect the Actions logs for the public, non-secret error m
 - `sudo wg show wg0`
 
 The installer saves a timestamped copy of an existing FreeRoute-managed config before replacing it. Do not publish that config: it contains the server private key and peer public keys, and backups of client profiles contain client private keys.
+
+
+## IPv6 fail-closed policy
+
+Generated client profiles assign a private ULA IPv6 address and route both `0.0.0.0/0` and `::/0` into WireGuard. The server currently does **not** provide IPv6 internet egress. Instead, its `ip6tables` rules put a drop rule first in both `FORWARD` and `INPUT` for traffic arriving on `wg0`. This prevents VPN clients from sending IPv6 traffic out through the host's unrelated network interface or reaching services on the host over the tunnel.
+
+Consequences:
+- IPv4 internet access is the only intended working internet path.
+- IPv6-only destinations will not load while connected until a separately designed and tested IPv6 egress path is deployed.
+- This server-side policy does not implement a device-level kill switch. When a tunnel disconnects, the operating system may resume using its normal network; real-device leak and reconnect tests remain mandatory.
+- The read-only diagnostic workflow verifies the IPv6 drop rules and the IPv4/IPv6 routes in each generated profile. It does not prove external reachability or zero leakage on a client.
