@@ -1,0 +1,58 @@
+name: Deploy WireGuard VPN
+
+on:
+  workflow_dispatch:
+    inputs:
+      endpoint_ip:
+        description: Public IPv4 address of the VPS outside Russia
+        required: true
+        type: string
+      port:
+        description: WireGuard UDP port
+        required: true
+        default: "51820"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vpn-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate inputs and secrets
+        env:
+          VPN_HOST: ${{ secrets.VPN_HOST }}
+          VPN_USER: ${{ secrets.VPN_USER }}
+          VPN_SSH_KEY: ${{ secrets.VPN_SSH_KEY }}
+          ENDPOINT_IP: ${{ inputs.endpoint_ip }}
+          WG_PORT: ${{ inputs.port }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$VPN_HOST" && -n "$VPN_USER" && -n "$VPN_SSH_KEY" ]] || { echo "Add VPN_HOST, VPN_USER and VPN_SSH_KEY repository secrets." >&2; exit 1; }
+          [[ "$ENDPOINT_IP" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "endpoint_ip must be an IPv4 address."; exit 1; }
+          [[ "$WG_PORT" =~ ^[0-9]+$ ]] && (( WG_PORT >= 1 && WG_PORT <= 65535 )) || { echo "Invalid UDP port."; exit 1; }
+          printf '%s\n' "$VPN_SSH_KEY" > "$RUNNER_TEMP/vpn_key"
+          chmod 600 "$RUNNER_TEMP/vpn_key"
+      - name: Install VPN server over SSH
+        env:
+          VPN_HOST: ${{ secrets.VPN_HOST }}
+          VPN_USER: ${{ secrets.VPN_USER }}
+          ENDPOINT_IP: ${{ inputs.endpoint_ip }}
+          WG_PORT: ${{ inputs.port }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$HOME/.ssh"
+          ssh-keyscan -H "$VPN_HOST" >> "$HOME/.ssh/known_hosts"
+          ssh -i "$RUNNER_TEMP/vpn_key" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPN_USER@$VPN_HOST" "sudo env WG_ENDPOINT='$ENDPOINT_IP' WG_PORT='$WG_PORT' bash -s" < scripts/setup-wireguard.sh
+      - name: Remove temporary SSH key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/vpn_key"
