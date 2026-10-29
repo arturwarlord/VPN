@@ -204,6 +204,10 @@ struct ContentView: View {
         )
         let directory = documents.appendingPathComponent("Profiles", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = true
+        var protectedDirectory = directory
+        try? protectedDirectory.setResourceValues(resourceValues)
         return directory
     }
 
@@ -311,12 +315,27 @@ struct ContentView: View {
             let tunnelProtocol = NETunnelProviderProtocol()
             tunnelProtocol.providerBundleIdentifier = "com.arturwarlord.freeroute.network-extension"
             tunnelProtocol.serverAddress = profile.name
-            // The config is kept on this device in the system's VPN configuration; no remote account is used.
-            tunnelProtocol.providerConfiguration = ["WgQuickConfig": profile.configuration]
+
+            // Store the secret config in the app/extension shared Keychain group.
+            // VPN preferences contain only a persistent reference, never the private key.
+            let previousReference = (manager.protocolConfiguration as? NETunnelProviderProtocol)?.passwordReference
+            let newReference = try ProfileKeychain.save(profile.configuration, profileName: profile.name)
+            tunnelProtocol.passwordReference = newReference
+            tunnelProtocol.providerConfiguration = nil
             manager.protocolConfiguration = tunnelProtocol
             manager.localizedDescription = "FreeRoute VPN"
             manager.isEnabled = true
-            try await saveManager(manager)
+
+            do {
+                try await saveManager(manager)
+            } catch {
+                ProfileKeychain.delete(reference: newReference)
+                throw error
+            }
+
+            if let previousReference, previousReference != newReference {
+                ProfileKeychain.delete(reference: previousReference)
+            }
             try await reloadManager(manager)
             try manager.connection.startVPNTunnel()
             activeManager = manager
