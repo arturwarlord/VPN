@@ -1,0 +1,33 @@
+name: Clean stale duplicate draft releases
+
+on:
+  push:
+    branches:
+      - "maintenance/cleanup-release-drafts"
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete only drafts whose tag already has a published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          all_releases="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | [.id, .tag_name, (.draft | tostring)] | @tsv')"
+          [[ -n "$all_releases" ]] || { echo "No releases found."; exit 0; }
+          deleted=0
+          while IFS=$'\t' read -r id tag draft; do
+            [[ "$draft" == "true" ]] || continue
+            if printf '%s\n' "$all_releases" | awk -F '\t' -v wanted="$tag" '$2 == wanted && $3 == "false" { found=1 } END { exit !found }'; then
+              echo "Removing stale draft release ID $id for published tag $tag."
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+              ((deleted += 1))
+            fi
+          done <<< "$all_releases"
+          echo "Removed $deleted stale duplicate draft release(s)."

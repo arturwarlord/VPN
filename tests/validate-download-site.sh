@@ -76,6 +76,23 @@ for required in (
 assert workflow.index("uses: actions/checkout@v4") < workflow.index('git ls-remote --exit-code --tags origin'), (
     "Release publisher must check out the repository before checking for existing version tags"
 )
+assert "concurrency:" in workflow and "cancel-in-progress: true" in workflow, (
+    "A newer push to the same release branch must cancel the older run to prevent duplicate releases"
+)
+assert 'marker="docs/releases/${GITHUB_REF_NAME#release/}.md"' in workflow, (
+    "Push-triggered releases must require a version-specific request file to prevent branch-creation runs"
+)
+cleanup_path = Path(".github/workflows/cleanup-draft-releases.yml")
+assert cleanup_path.is_file(), "Draft-release cleanup workflow is missing"
+cleanup = cleanup_path.read_text(encoding="utf-8")
+for required in (
+    "maintenance/cleanup-release-drafts",
+    "gh api --paginate",
+    '[[ "$draft" == "true" ]]',
+    '$3 == "false"',
+    "gh api --method DELETE",
+):
+    assert required in cleanup, f"Draft cleanup workflow missing safety check: {required}"
 for platform in ("android", "windows", "ios"):
     reusable = Path(".github/workflows/" + platform + "-client.yml").read_text(encoding="utf-8")
     assert "workflow_call:" in reusable, f"{platform} build workflow cannot be reused for release publishing"
