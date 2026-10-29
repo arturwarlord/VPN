@@ -10,8 +10,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         completionHandler: @escaping (Error?) -> Void
     ) {
         guard
-            let providerConfiguration = (protocolConfiguration as? NETunnelProviderProtocol)?.providerConfiguration,
-            let wgQuickConfig = providerConfiguration["WgQuickConfig"] as? String
+            let tunnelProtocol = protocolConfiguration as? NETunnelProviderProtocol,
+            let reference = tunnelProtocol.passwordReference,
+            let wgQuickConfig = ProfileKeychain.load(reference: reference)
         else {
             completionHandler(PacketTunnelError.invalidConfiguration)
             return
