@@ -53,7 +53,7 @@ expect_missing_endpoint() {
 
 expect_valid "1.1.1.1" "51820"
 expect_valid "8.8.8.8" "1"
-expect_valid "203.0.114.1" "65535"
+expect_valid "1.0.0.1" "65535"
 
 expect_missing_endpoint
 expect_invalid "10.0.0.1" "51820" "private IPv4"
@@ -64,6 +64,8 @@ expect_invalid "169.254.1.1" "51820" "link-local IPv4"
 expect_invalid "127.0.0.1" "51820" "loopback IPv4"
 expect_invalid "0.0.0.0" "51820" "unspecified IPv4"
 expect_invalid "224.0.0.1" "51820" "multicast IPv4"
+expect_invalid "192.0.0.2" "51820" "special-purpose IPv4"
+expect_invalid "192.88.99.1" "51820" "deprecated relay IPv4"
 expect_invalid "192.0.2.2" "51820" "documentation IPv4"
 expect_invalid "198.51.100.12" "51820" "documentation IPv4"
 expect_invalid "203.0.113.9" "51820" "documentation IPv4"
