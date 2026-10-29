@@ -18,13 +18,15 @@ jobs:
       - name: Check shell syntax
         run: bash -n scripts/setup-wireguard.sh
 
-      - name: Check required project files
+      - name: Check required project files and build settings
         shell: bash
         run: |
           set -euo pipefail
           test -s README.md
           test -s scripts/setup-wireguard.sh
           test -s settings.gradle.kts
+          test -s gradle.properties
+          grep -q '^android.useAndroidX=true$' gradle.properties
           test -s app/build.gradle.kts
           test -s app/src/main/AndroidManifest.xml
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
