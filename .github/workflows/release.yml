@@ -1,6 +1,9 @@
 name: Publish FreeRoute release
 
 on:
+  push:
+    branches:
+      - "release/v*"
   workflow_dispatch:
     inputs:
       version:
@@ -44,24 +47,39 @@ jobs:
           fetch-depth: 0
 
       - name: Validate version and release source
+        id: validate
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION_INPUT: ${{ inputs.version }}
+          PRERELEASE_INPUT: ${{ inputs.prerelease }}
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$GITHUB_REF" == "refs/heads/main" ]] || {
-            echo "Run this workflow from the main branch only." >&2
-            exit 1
-          }
-          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || {
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            [[ "$GITHUB_REF" == "refs/heads/main" ]] || {
+              echo "Manual release workflow must be run from the main branch." >&2
+              exit 1
+            }
+            version="$VERSION_INPUT"
+            prerelease="${PRERELEASE_INPUT,,}"
+          else
+            [[ "$GITHUB_REF_NAME" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || {
+              echo "Push-triggered releases must use a branch named release/vMAJOR.MINOR.PATCH." >&2
+              exit 1
+            }
+            version="${GITHUB_REF_NAME#release/v}"
+            prerelease="true"
+          fi
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || {
             echo "Version must look like 0.1.0 or 0.1.0-rc.1 (without leading v)." >&2
             exit 1
           }
-          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null 2>&1; then
-            echo "Tag v$VERSION already exists. Choose a new version." >&2
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "Tag v$version already exists. Choose a new version." >&2
             exit 1
           fi
-          echo "Preparing FreeRoute v$VERSION from commit $GITHUB_SHA."
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "Preparing FreeRoute v$version from commit $GITHUB_SHA (pre-release=$prerelease)."
 
       - name: Download Android build
         uses: actions/download-artifact@v4
@@ -99,8 +117,8 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
-          PRERELEASE: ${{ inputs.prerelease }}
+          VERSION: ${{ steps.validate.outputs.version }}
+          PRERELEASE: ${{ steps.validate.outputs.prerelease }}
         shell: bash
         run: |
           set -euo pipefail
