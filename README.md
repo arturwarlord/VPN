@@ -7,12 +7,14 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 ## Current status
 
 - [x] Ubuntu/Debian WireGuard server bootstrap script with explicit endpoint validation, safe permissions and rollback if service startup fails.
+- [x] 22 automated endpoint-validation tests for malformed, private, local and otherwise non-public addresses/ports.
 - [x] Manual GitHub Actions server-deployment workflow with verified SSH host-key pinning.
 - [x] Read-only server diagnostics that do not print private client profiles.
 - [x] Native Android client with local multi-profile management, connect/disconnect controls and an IPv6-route warning.
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
 - [x] iOS SwiftUI app and Packet Tunnel extension compile successfully as an unsigned build in GitHub Actions.
+- [x] iOS tunnel configuration is stored in a shared Keychain group; VPN preferences retain only a Keychain reference. The app avoids overwriting unrelated VPN profiles.
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
 - [ ] Sign and install the iOS app with an Apple developer team that has the required Network Extension entitlement.
 - [ ] Find a sustainable, genuinely free VPN exit node outside Russia.
@@ -44,10 +46,12 @@ Details: [Windows client notes](docs/WINDOWS_CLIENT.md).
 
 ## iPhone client
 
-Source: `ios/`. The SwiftUI app and Network Extension Packet Tunnel provider use the embeddable WireGuardKit engine. The unsigned app build and Packet Tunnel extension now compile, pass bundle-metadata checks, and are packaged by GitHub Actions:
-[Open the successful iOS build](https://github.com/arturwarlord/VPN/actions/runs/40948864901)
+Source: `ios/`. The SwiftUI app and Network Extension Packet Tunnel provider use the embeddable WireGuardKit engine. The latest unsigned app build and Packet Tunnel extension compile, pass bundle-metadata checks and are packaged by GitHub Actions:
+[Open the successful iOS build](https://github.com/arturwarlord/VPN/actions/runs/40951584935)
 
-An unsigned CI build cannot be installed as a working VPN on a personal iPhone. Installation and operation require signing with an Apple developer team and provisioning the Packet Tunnel Network Extension entitlement. The actual tunnel must also be tested against a reachable endpoint.
+Active tunnel configuration is saved in Keychain using the shared App Group `group.com.arturwarlord.freeroute`; the system VPN preferences store a persistent reference rather than the client private key text. Imported `.conf` files remain inside the protected local app sandbox and are excluded from ordinary backup.
+
+An unsigned CI build cannot be installed as a working VPN on a personal iPhone. Installation and operation require signing with an Apple developer team, enabling the Packet Tunnel Network Extension entitlement, and registering the App Group for both the app and extension in the provisioning profiles. The actual tunnel and Keychain access must still be tested on a real iPhone against a reachable endpoint.
 
 Details: [iOS client notes](docs/IOS_CLIENT.md).
 
@@ -101,6 +105,6 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `.github/workflows/android-client.yml` — Android debug APK build.
 - `.github/workflows/windows-client.yml` — Windows package build.
 - `.github/workflows/ios-client.yml` — unsigned iOS build.
-- `.github/workflows/ci.yml` — syntax, required-file and secret-material checks.
+- `.github/workflows/ci.yml` — syntax, required-file, shell-step, endpoint-validation and secret-material checks.
 - `.github/workflows/deploy.yml` — manual server deployment over pinned SSH.
 - `.github/workflows/diagnose-server.yml` — read-only server diagnosis.
