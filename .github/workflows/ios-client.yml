@@ -36,7 +36,7 @@ jobs:
           fi
           xcodegen --version
 
-      - name: Checkout WireGuardKit source and normalize Swift tools version
+      - name: Checkout WireGuardKit source and apply CI compatibility fixes
         shell: bash
         run: |
           set -euo pipefail
@@ -45,7 +45,8 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          manifest = Path("ios/vendor/wireguard-apple/Package.swift")
+          root = Path("ios/vendor/wireguard-apple")
+          manifest = root / "Package.swift"
           source = manifest.read_text(encoding="utf-8")
           first_line = source.splitlines()[0]
           if first_line == "// swift-tools-version:5.3":
@@ -56,6 +57,17 @@ jobs:
               print("WireGuardKit manifest already declares a compatible tools version.")
           else:
               raise SystemExit("Unexpected WireGuardKit Package.swift tools-version: " + first_line)
+
+          header = root / "Sources/WireGuardKitC/WireGuardKitC.h"
+          header_source = header.read_text(encoding="utf-8")
+          if "#include <sys/types.h>" not in header_source:
+              header_source = header_source.replace(
+                  '#include "key.h"',
+                  "#include <sys/types.h>\n#include \"key.h\"",
+                  1,
+              )
+              header.write_text(header_source, encoding="utf-8")
+              print("Added explicit system type include for modern Xcode module builds.")
           PY
 
       - name: Generate Xcode project
