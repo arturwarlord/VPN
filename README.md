@@ -28,7 +28,7 @@ Source: `app/`. FreeRoute has its own native UI, local profile picker, profile i
 To obtain the test APK:
 1. Open [Build FreeRoute Android APK](https://github.com/arturwarlord/VPN/actions/workflows/android-client.yml).
 2. Open the latest successful run and download the `freeroute-android-debug` artifact.
-3. Extract `app-debug.apk) from the artifact and install it for personal testing.
+3. Extract the file named `app-debug.apk` from the artifact and install it for personal testing.
 
 This is a debug build, not a release-signed public distribution. The app cannot connect until a valid profile for a reachable server is available. On POCO/Xiaomi, background and battery-restriction behavior still needs real-device testing.
 
@@ -47,12 +47,12 @@ Details: [Windows client notes](docs/WINDOWS_CLIENT.md).
 
 ## iPhone client
 
-Source: `ios/`. The initial SwiftUI app and Network Extension Packet Tunnel provider are in the repository. The project uses the embeddable WireGuardKit engine and includes the relevant third-party license notice.
-
-The macOS GitHub Actions workflow is being used to compile an **unsigned** iOS build:
+Source: `ios/`. The SwiftUI app and Network Extension Packet Tunnel provider use the embeddable WireGuardKit engine. The workflow compiles an unsigned build for inspection:
 [Open the iOS build workflow](https://github.com/arturwarlord/VPN/actions/workflows/ios-client.yml)
 
-An unsigned CI build cannot be installed as a working VPN on a personal iPhone. Installation/operation requires signing with an Apple developer team and provisioning the Packet Tunnel Network Extension entitlement. The actual tunnel must also be tested against a reachable endpoint.
+An unsigned CI build cannot be installed as a working VPN on a personal iPhone. Installation and operation require signing with an Apple developer team and provisioning the Packet Tunnel Network Extension entitlement. The actual tunnel must also be tested against a reachable endpoint.
+
+Details: [iOS client notes](docs/IOS_CLIENT.md).
 
 ## Server and €0 constraint
 
@@ -88,6 +88,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `ios/` — iOS app and Packet Tunnel extension.
 - `docs/ANDROID_CLIENT.md` — Android client notes.
 - `docs/WINDOWS_CLIENT.md` — Windows client notes.
+- `docs/IOS_CLIENT.md` — iOS client notes.
 - `scripts/setup-wireguard.sh` — server bootstrap script.
 - `.github/workflows/android-client.yml` — Android debug APK build.
 - `.github/workflows/windows-client.yml` — Windows package build.
