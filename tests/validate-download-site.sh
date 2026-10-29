@@ -66,10 +66,14 @@ for required in (
     "SHA256SUMS.txt",
     "gh release create",
     '[[ "$GITHUB_REF" == "refs/heads/main" ]]',
+    "uses: actions/checkout@v4",
 ):
     assert required in workflow, f"Release workflow is missing required behavior: {required}"
+assert workflow.index("uses: actions/checkout@v4") < workflow.index('git ls-remote --exit-code --tags origin'), (
+    "Release publisher must check out the repository before checking for existing version tags"
+)
 for platform in ("android", "windows", "ios"):
     reusable = Path(".github/workflows/" + platform + "-client.yml").read_text(encoding="utf-8")
     assert "workflow_call:" in reusable, f"{platform} build workflow cannot be reused for release publishing"
-print("Download-site tests: passed (platform links, release updater, safe text rendering, iOS status, responsive layout).")
+print("Download-site and release-workflow tests: passed (platform links, release updater, safe rendering, responsive layout, repository checkout).")
 PY
