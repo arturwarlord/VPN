@@ -120,16 +120,35 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      - name: Ensure license notices are included in the app package
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/FreeRouteDerivedData/Build/Products/Release-iphoneos/FreeRoute.app"
+          test -f ios/Resources/THIRD_PARTY_NOTICES.txt
+          cp ios/Resources/THIRD_PARTY_NOTICES.txt "$APP/THIRD_PARTY_NOTICES.txt"
+
       - name: Verify app and extension outputs
         shell: bash
         run: |
           set -euo pipefail
           APP="$RUNNER_TEMP/FreeRouteDerivedData/Build/Products/Release-iphoneos/FreeRoute.app"
+          EXT="$APP/PlugIns/FreeRoutePacketTunnel.appex"
           test -d "$APP"
-          test -d "$APP/PlugIns/FreeRoutePacketTunnel.appex"
+          test -d "$EXT"
           test -f "$APP/THIRD_PARTY_NOTICES.txt"
           plutil -lint "$APP/Info.plist"
-          plutil -lint "$APP/PlugIns/FreeRoutePacketTunnel.appex/Info.plist"
+          plutil -lint "$EXT/Info.plist"
+          APP_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")"
+          EXT_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$EXT/Info.plist")"
+          APP_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")"
+          EXT_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$EXT/Info.plist")"
+          [[ "$APP_ID" == "com.arturwarlord.freeroute" ]]
+          [[ "$EXT_ID" == "$APP_ID.network-extension" ]]
+          [[ "$APP_VERSION" == "$EXT_VERSION" ]]
+          echo "Verified app bundle ID: $APP_ID"
+          echo "Verified extension bundle ID: $EXT_ID"
+          echo "Verified matched bundle version: $APP_VERSION"
 
       - name: Package unsigned iOS build for inspection
         shell: bash
