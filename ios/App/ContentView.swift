@@ -31,6 +31,7 @@ struct ContentView: View {
     @State private var alertMessage = ""
     @State private var status = "Ожидает настройки"
     @State private var isBusy = false
+    @State private var isCheckingExitCountry = false
     @State private var activeManager: NETunnelProviderManager?
 
     private let accent = Color(red: 0.32, green: 0.58, blue: 0.95)
@@ -140,11 +141,29 @@ struct ContentView: View {
                             }
                             .buttonStyle(PrimaryButtonStyle(color: Color(red: 0.25, green: 0.29, blue: 0.38)))
                             .disabled(isBusy || !status.contains("подключён"))
+
+                            Button {
+                                Task { await checkExitCountry() }
+                            } label: {
+                                Label(
+                                    isCheckingExitCountry ? "Проверяем выход…" : "Проверить страну выхода",
+                                    systemImage: "location.magnifyingglass"
+                                )
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(SecondaryButtonStyle())
+                            .disabled(isBusy || status != "VPN подключён" || isCheckingExitCountry)
                         }
 
                         Text("Имя профиля не подтверждает страну выхода. Её определяет удалённый сервер. Профили хранятся локально на этом устройстве.")
                             .font(.footnote)
                             .foregroundStyle(Color.white.opacity(0.5))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 4)
+
+                        Text("Проверка выполняется только по нажатию: текущий публичный IP отправляется сервису ipwho.is. Результат приблизительный и не сохраняется. Если туннель отключится во время запроса, сервис может увидеть IP основного подключения.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.white.opacity(0.48))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 4)
 
@@ -349,6 +368,45 @@ struct ContentView: View {
             status = "Не удалось подключиться"
             alertTitle = "Ошибка VPN"
             alertMessage = error.localizedDescription + "\n\nНа iPhone для Packet Tunnel требуется подписанное приложение с разрешением Network Extension."
+            showAlert = true
+        }
+    }
+
+    private func checkExitCountry() async {
+        guard status == "VPN подключён", !isCheckingExitCountry else { return }
+        isCheckingExitCountry = true
+        defer { isCheckingExitCountry = false }
+
+        do {
+            guard let url = URL(string: "https://ipwho.is/?fields=success,ip,country,country_code") else {
+                throw URLError(.badURL)
+            }
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 12
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            guard
+                let payload = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let success = payload["success"] as? Bool,
+                success,
+                let ip = payload["ip"] as? String, !ip.isEmpty,
+                let country = payload["country"] as? String, !country.isEmpty,
+                let countryCode = payload["country_code"] as? String, countryCode.count == 2
+            else {
+                throw ProfileError.invalidFormat
+            }
+
+            alertTitle = "Проверка страны выхода"
+            alertMessage = "Публичный IP: \(ip)\nОпределяемая страна: \(country) (\(countryCode))\n\nЭто геолокация по IP, а не абсолютная гарантия. Результат не сохраняется. Если туннель отключится во время проверки, сервис может увидеть IP основного подключения."
+            showAlert = true
+        } catch {
+            alertTitle = "Не удалось проверить страну"
+            alertMessage = "Проверь VPN-подключение и доступность сервиса геолокации. Проверка не сохраняет IP в приложении.\n\n\(error.localizedDescription)"
             showAlert = true
         }
     }
