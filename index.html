@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b17">
+  <meta name="description" content="FreeRoute — собственные приложения VPN для Android, Windows и iPhone. Загрузки, версии, история обновлений и прозрачный статус проекта.">
+  <meta property="og:title" content="FreeRoute — центр загрузок">
+  <meta property="og:description" content="Сборки FreeRoute, история версий и честный статус разработки.">
+  <meta property="og:type" content="website">
+  <title>FreeRoute — центр загрузок</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080b17;
+      --surface: rgba(18, 24, 43, .82);
+      --surface-solid: #11172a;
+      --line: rgba(172, 190, 230, .14);
+      --text: #f3f6ff;
+      --muted: #a2abc3;
+      --cyan: #67e8f9;
+      --violet: #a78bfa;
+      --green: #9be8bf;
+      --amber: #f6d28a;
+      --radius: 24px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 9% 0%, rgba(91, 73, 204, .23), transparent 35rem),
+        radial-gradient(ellipse at 95% 18%, rgba(26, 173, 194, .12), transparent 31rem),
+        linear-gradient(160deg, #080b17 0%, #0b1020 54%, #080b17 100%);
+      line-height: 1.55;
+    }
+    a { color: inherit; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 4px; }
+    .shell { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 24px 0; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 760; letter-spacing: -.035em; font-size: 1.2rem; }
+    .brand-mark {
+      position: relative; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 15px;
+      background: linear-gradient(145deg, #9a86ff, #4dd8ec); color: #08101f;
+      box-shadow: 0 8px 28px rgba(103, 232, 249, .18);
+    }
+    .brand-mark svg { width: 25px; height: 25px; }
+    .nav { display: flex; align-items: center; gap: 24px; color: var(--muted); font-size: .9rem; }
+    .nav a { text-decoration: none; transition: color .2s ease; }
+    .nav a:hover { color: var(--text); }
+    .github-link { border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; color: var(--text) !important; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 48px; align-items: center; padding: 72px 0 62px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 10px; color: #d6d0ff; font-size: .76rem; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 5px rgba(246,210,138,.12); }
+    h1 { margin: 19px 0 20px; max-width: 740px; font-size: clamp(3rem, 6vw, 5.3rem); line-height: .99; letter-spacing: -.075em; font-weight: 780; }
+    .gradient-text { color: transparent; background: linear-gradient(95deg, #c4b5fd 0%, #67e8f9 75%); -webkit-background-clip: text; background-clip: text; }
+    .hero-copy { max-width: 635px; color: #b4bdd3; font-size: clamp(1rem, 1.6vw, 1.15rem); line-height: 1.8; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; padding: 12px 18px; border: 1px solid transparent; border-radius: 14px; font-weight: 740; font-size: .91rem; text-decoration: none; transition: transform .2s, border-color .2s, background .2s; cursor: pointer; }
+    .button:hover { transform: translateY(-2px); }
+    .button-primary { color: #08121d; background: linear-gradient(105deg, #a99aff, #7ce7ed); box-shadow: 0 10px 35px rgba(103, 232, 249, .12); }
+    .button-secondary { color: var(--text); border-color: var(--line); background: rgba(255,255,255,.025); }
+    .hero-art {
+      position: relative; min-height: 340px; display: grid; place-items: center; overflow: hidden;
+      border: 1px solid rgba(184, 197, 255, .15); border-radius: 32px;
+      background: radial-gradient(ellipse at 50% 44%, rgba(117, 101, 234, .21), transparent 58%), linear-gradient(145deg, rgba(31, 40, 71, .82), rgba(10, 15, 30, .78));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 30px 90px rgba(0,0,0,.22);
+    }
+    .hero-art:before, .hero-art:after { content: ""; position: absolute; width: 270px; height: 270px; border: 1px solid rgba(103,232,249,.18); border-radius: 50%; }
+    .hero-art:after { width: 205px; height: 205px; border-color: rgba(167,139,250,.26); }
+    .orbital { position: absolute; width: 315px; height: 120px; border: 1px solid rgba(103,232,249,.32); border-radius: 50%; transform: rotate(-32deg); }
+    .orbital.two { width: 320px; height: 145px; transform: rotate(55deg); border-color: rgba(167,139,250,.32); }
+    .core { z-index: 2; position: relative; display: grid; place-items: center; width: 112px; height: 112px; border-radius: 35px; background: linear-gradient(145deg, #b9a9ff, #5dddea); box-shadow: 0 0 70px rgba(103,232,249,.24); color: #071320; }
+    .core svg { width: 61px; height: 61px; }
+    .orbit-dot { position: absolute; z-index: 3; width: 13px; height: 13px; border-radius: 50%; background: #a6f4ff; box-shadow: 0 0 24px rgba(103,232,249,.65); }
+    .dot-one { top: 57px; right: 82px; }
+    .dot-two { bottom: 72px; left: 58px; background: #c2afff; box-shadow: 0 0 24px rgba(167,139,250,.65); }
+    .art-label { position: absolute; bottom: 22px; color: #8d9ab7; font-size: .76rem; letter-spacing: .14em; text-transform: uppercase; }
+    .status-strip { display: flex; align-items: center; gap: 14px; padding: 17px 19px; border: 1px solid rgba(246,210,138,.2); border-radius: 17px; background: rgba(246,210,138,.045); color: #e7d4aa; font-size: .9rem; }
+    .status-strip strong { color: #fff0cb; }
+    .status-icon { display: grid; flex: 0 0 34px; place-items: center; height: 34px; border-radius: 12px; background: rgba(246,210,138,.12); }
+    section { scroll-margin-top: 20px; }
+    .section { padding: 68px 0 22px; }
+    .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 24px; }
+    .kicker { color: var(--cyan); font-size: .76rem; font-weight: 760; letter-spacing: .15em; text-transform: uppercase; }
+    h2 { margin: 8px 0 0; font-size: clamp(1.9rem, 4vw, 2.65rem); line-height: 1.1; letter-spacing: -.055em; }
+    .section-intro { max-width: 440px; margin: 0; color: var(--muted); font-size: .94rem; }
+    .download-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .download-card { display: flex; flex-direction: column; min-height: 330px; padding: 25px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, rgba(22,29,51,.84), rgba(13,18,34,.82)); transition: transform .22s, border-color .22s; }
+    .download-card:hover { transform: translateY(-3px); border-color: rgba(103,232,249,.34); }
+    .platform-top { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+    .platform-icon { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid rgba(255,255,255,.1); border-radius: 17px; background: rgba(255,255,255,.045); }
+    .platform-icon svg { width: 28px; height: 28px; }
+    .tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 999px; color: #c6d1ea; font-size: .7rem; font-weight: 730; white-space: nowrap; }
+    .tag-preview { border-color: rgba(246,210,138,.2); color: var(--amber); }
+    .download-card h3 { margin: 23px 0 5px; font-size: 1.35rem; letter-spacing: -.035em; }
+    .platform-sub { margin: 0; color: #8d9ab7; font-size: .84rem; }
+    .card-copy { margin: 19px 0 24px; color: #b1bbd1; font-size: .91rem; }
+    .card-foot { margin-top: auto; }
+    .download-button { width: 100%; min-height: 45px; }
+    .asset-meta { display: block; margin-top: 11px; color: #7e8ba8; text-align: center; font-size: .75rem; }
+    .release-panel { display: grid; grid-template-columns: .82fr 1.18fr; gap: 16px; }
+    .release-feature, .release-history { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 27px; }
+    .release-feature { background: radial-gradient(ellipse at 0% 0%, rgba(167,139,250,.15), transparent 60%), var(--surface-solid); }
+    .release-version { display: block; margin: 12px 0 8px; font-size: 2rem; letter-spacing: -.06em; font-weight: 780; }
+    .release-date { color: var(--muted); font-size: .86rem; }
+    .release-notes { margin: 21px 0; color: #b7c0d5; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .88rem; max-height: 230px; overflow: auto; }
+    .release-list { display: grid; gap: 0; }
+    .release-row { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 13px; padding: 17px 0; border-bottom: 1px solid var(--line); }
+    .release-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .release-mark { width: 9px; height: 9px; margin-top: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 14px rgba(103,232,249,.35); }
+    .release-row strong { display: block; font-size: .95rem; }
+    .release-row p { margin: 4px 0 0; color: var(--muted); font-size: .82rem; }
+    .release-row time { color: #8592ad; font-size: .75rem; white-space: nowrap; }
+    .empty-state { color: var(--muted); font-size: .93rem; }
+    .capabilities { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .capability { padding: 21px; border: 1px solid var(--line); border-radius: 18px; background: rgba(18,24,43,.5); }
+    .capability .number { color: var(--violet); font-size: .76rem; font-weight: 760; letter-spacing: .12em; }
+    .capability h3 { margin: 10px 0 7px; font-size: 1.02rem; }
+    .capability p { margin: 0; color: var(--muted); font-size: .87rem; }
+    .footer { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 78px; padding: 28px 0 38px; border-top: 1px solid var(--line); color: #8995b0; font-size: .82rem; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 17px; }
+    .footer a { color: #b6c1da; text-decoration: none; }
+    .footer a:hover { color: var(--cyan); }
+    .tiny { color: #7e8aa5; font-size: .76rem; }
+    .loading { animation: fade-in .5s ease both; }
+    @keyframes fade-in { from { opacity: .4; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 900px) {
+      .hero { gap: 26px; padding-top: 54px; }
+      .hero-art { min-height: 300px; }
+      .download-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .download-card:last-child { grid-column: 1 / -1; min-height: auto; }
+      .release-panel { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 28px, 1160px); }
+      .topbar { padding: 16px 0; }
+      .nav { gap: 12px; }
+      .nav a:not(.github-link) { display: none; }
+      .github-link { padding: 8px 11px; font-size: .8rem; }
+      .hero { display: flex; flex-direction: column; align-items: stretch; padding: 47px 0 26px; }
+      h1 { font-size: clamp(2.8rem, 13vw, 4.1rem); }
+      .hero-art { min-height: 270px; }
+      .section { padding-top: 48px; }
+      .section-heading { display: block; }
+      .section-intro { margin-top: 12px; }
+      .download-grid, .capabilities { grid-template-columns: 1fr; }
+      .download-card, .download-card:last-child { grid-column: auto; min-height: 300px; }
+      .release-feature, .release-history { padding: 21px; }
+      .release-row { grid-template-columns: auto 1fr; }
+      .release-row time { grid-column: 2; }
+      .footer { flex-direction: column; align-items: flex-start; margin-top: 48px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="#top" aria-label="FreeRoute — наверх">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M7 21.5 16 7l9 14.5H7Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M11 22h10M16 14.5v10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </span>
+      <span>FreeRoute</span>
+    </a>
+    <nav class="nav" aria-label="Главная навигация">
+      <a href="#downloads">Загрузки</a>
+      <a href="#updates">Обновления</a>
+      <a class="github-link" href="https://github.com/arturwarlord/VPN" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+    </nav>
+  </header>
+
+  <main id="top" class="shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <div class="eyebrow"><span class="pulse" aria-hidden="true"></span> ЦЕНТР ЗАГРУЗОК · EARLY ACCESS</div>
+        <h1 id="hero-title">Твой маршрут.<br><span class="gradient-text">Твои правила.</span></h1>
+        <p class="hero-copy">Собственные приложения FreeRoute для Android, Windows и iPhone. Здесь собраны актуальные сборки, версии и история изменений — без путаницы с файлами и случайных ссылок.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#downloads">Выбрать устройство <span aria-hidden="true">↓</span></a>
+          <a class="button button-secondary" href="https://github.com/arturwarlord/VPN/releases" target="_blank" rel="noopener noreferrer">Все релизы ↗</a>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="orbital"></div><div class="orbital two"></div><span class="orbit-dot dot-one"></span><span class="orbit-dot dot-two"></span>
+        <div class="core"><svg viewBox="0 0 64 64" fill="none"><path d="M13 42 32 11l19 31H13Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M22 42h20M32 25v28" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>
+        <div class="art-label">ONE PROJECT · THREE PLATFORMS</div>
+      </div>
+    </section>
+
+    <div class="status-strip" role="status">
+      <span class="status-icon" aria-hidden="true">!</span>
+      <span><strong>FreeRoute пока находится в разработке.</strong> Приложения собираются автоматически, но рабочий VPN-сервер и полноценная смена страны ещё не подтверждены. Не используйте тестовые сборки как гарантию приватности.</span>
+    </div>
+
+    <section id="downloads" class="section" aria-labelledby="downloads-title">
+      <div class="section-heading">
+        <div><div class="kicker">Под твоё устройство</div><h2 id="downloads-title">Скачать FreeRoute</h2></div>
+        <p class="section-intro">После публикации версии кнопки ведут прямо на файлы релиза. До первого релиза здесь будут ссылки на сборки GitHub Actions.</p>
+      </div>
+      <div class="download-grid">
+        <article class="download-card">
+          <div class="platform-top">
+            <div class="platform-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none"><path d="M8 12.5h16v11A2.5 2.5 0 0 1 21.5 26h-11A2.5 2.5 0 0 1 8 23.5v-11ZM7 12.5h18M11 7l2 3M21 7l-2 3M12 17v4M20 17v4" stroke="#9be8bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14v6M27 14v6" stroke="#9be8bf" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <span class="tag tag-preview">APK · TEST</span>
+          </div>
+          <h3>Android</h3><p class="platform-sub">POCO, Xiaomi и другие Android-устройства</p>
+          <p class="card-copy">Установочный APK для тестирования. Для личной установки может потребоваться разрешить установку из выбранного источника.</p>
+          <div class="card-foot"><a id="android-download" class="button button-primary download-button" href="https://github.com/arturwarlord/VPN/actions/workflows/android-client.yml" target="_blank" rel="noopener noreferrer">Открыть сборки ↗</a><span id="android-meta" class="asset-meta">Проверяем актуальную версию…</span></div>
+        </article>
+        <article class="download-card">
+          <div class="platform-top">
+            <div class="platform-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none"><rect x="4" y="5" width="24" height="17" rx="2.5" stroke="#9ea9ff" stroke-width="2"/><path d="M11 27h10M16 22v5M9 10h14M9 14h8" stroke="#9ea9ff" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <span class="tag tag-preview">ZIP · x64</span>
+          </div>
+          <h3>Windows</h3><p class="platform-sub">Windows 10/11 · x64</p>
+          <p class="card-copy">Самодостаточный тестовый пакет приложения и движка WireGuard. Для сетевого адаптера и VPN-службы нужны права администратора.</p>
+          <div class="card-foot"><a id="windows-download" class="button button-primary download-button" href="https://github.com/arturwarlord/VPN/actions/workflows/windows-client.yml" target="_blank" rel="noopener noreferrer">Открыть сборки ↗</a><span id="windows-meta" class="asset-meta">Проверяем актуальную версию…</span></div>
+        </article>
+        <article class="download-card">
+          <div class="platform-top">
+            <div class="platform-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none"><rect x="7" y="3" width="18" height="26" rx="4" stroke="#d2b7ff" stroke-width="2"/><path d="M13 7h6M14 25h4" stroke="#d2b7ff" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <span class="tag tag-preview">UNSIGNED</span>
+          </div>
+          <h3>iPhone</h3><p class="platform-sub">iOS · сборка для инспекции</p>
+          <p class="card-copy">Пакет iOS пока не подписан и не устанавливается как готовое приложение. Нужны Apple Developer Team, подпись и разрешение Network Extension.</p>
+          <div class="card-foot"><a id="ios-download" class="button button-secondary download-button" href="https://github.com/arturwarlord/VPN/actions/workflows/ios-client.yml" target="_blank" rel="noopener noreferrer">Открыть сборки ↗</a><span id="ios-meta" class="asset-meta">Не предназначено для прямой установки</span></div>
+        </article>
+      </div>
+      <p class="tiny" style="margin-top:17px">Текущие CI-артефакты хранятся ограниченное время. Долговременные загрузки будут прикрепляться к версиям в разделе «Релизы».</p>
+    </section>
+
+    <section id="updates" class="section" aria-labelledby="updates-title">
+      <div class="section-heading">
+        <div><div class="kicker">Что изменилось</div><h2 id="updates-title">Версии и обновления</h2></div>
+        <p class="section-intro">Список загружается из официальных релизов репозитория. После публикации новой версии страница обновит список автоматически.</p>
+      </div>
+      <div class="release-panel">
+        <article class="release-feature">
+          <div class="kicker">Последняя опубликованная версия</div>
+          <strong id="latest-version" class="release-version">Ожидает первого релиза</strong>
+          <div id="latest-date" class="release-date">Номер версии появится после публикации сборки.</div>
+          <div id="latest-notes" class="release-notes">Здесь будут краткое описание изменений и важные замечания к версии.</div>
+          <a id="release-page" class="button button-secondary" href="https://github.com/arturwarlord/VPN/releases" target="_blank" rel="noopener noreferrer">Открыть страницу релизов ↗</a>
+        </article>
+        <article class="release-history">
+          <div class="kicker">История релизов</div>
+          <div id="release-list" class="release-list" aria-live="polite"><p class="empty-state">Загружаем историю релизов…</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="status-title">
+      <div class="section-heading">
+        <div><div class="kicker">Перед установкой</div><h2 id="status-title">Что важно знать</h2></div>
+      </div>
+      <div class="capabilities">
+        <article class="capability"><div class="number">01 / СТАТУС</div><h3>Приложения — тестовые</h3><p>Успешная сборка подтверждает, что приложение компилируется. Она не подтверждает работу реального туннеля или безопасность соединения.</p></article>
+        <article class="capability"><div class="number">02 / СЕРВЕР</div><h3>VPN-сервер ещё не запущен</h3><p>Публичный сервер вне России, стабильное подключение и проверка DNS/IP на реальных устройствах остаются следующими этапами.</p></article>
+        <article class="capability"><div class="number">03 / ОБНОВЛЕНИЯ</div><h3>Публикация версий через Releases</h3><p>Версии будут содержать приложения, контрольные суммы SHA-256 и описание изменений. Тестовые сборки остаются в GitHub Actions.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="shell footer">
+    <div><a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M7 21.5 16 7l9 14.5H7Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M11 22h10M16 14.5v10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span>FreeRoute</span></a><div class="tiny" style="margin-top:10px">© <span id="year"></span> FreeRoute · Проект в разработке</div></div>
+    <div class="footer-links"><a href="https://github.com/arturwarlord/VPN/releases" target="_blank" rel="noopener noreferrer">Релизы</a><a href="https://github.com/arturwarlord/VPN/actions" target="_blank" rel="noopener noreferrer">Сборки</a><a href="https://github.com/arturwarlord/VPN" target="_blank" rel="noopener noreferrer">Исходный код</a><a href="https://github.com/arturwarlord/VPN/issues" target="_blank" rel="noopener noreferrer">Сообщить о проблеме</a></div>
+  </footer>
+
+  <script>
+    (function () {
+      "use strict";
+      var api = "https://api.github.com/repos/arturwarlord/VPN";
+      var fallback = {
+        android: "https://github.com/arturwarlord/VPN/actions/workflows/android-client.yml",
+        windows: "https://github.com/arturwarlord/VPN/actions/workflows/windows-client.yml",
+        ios: "https://github.com/arturwarlord/VPN/actions/workflows/ios-client.yml"
+      };
+      document.getElementById("year").textContent = String(new Date().getFullYear());
+
+      function formatDate(value) {
+        if (!value) return "Дата не указана";
+        try { return new Intl.DateTimeFormat("ru-RU", { year: "numeric", month: "long", day: "numeric" }).format(new Date(value)); }
+        catch (_) { return value; }
+      }
+      function safeText(value, max) {
+        var text = String(value || "").replace(/\r/g, "").trim();
+        if (max && text.length > max) text = text.slice(0, max).trim() + "…";
+        return text;
+      }
+      function findAsset(release, names) {
+        if (!release || !Array.isArray(release.assets)) return null;
+        for (var i = 0; i < names.length; i++) {
+          var found = release.assets.find(function (asset) { return asset.name === names[i]; });
+          if (found) return found;
+        }
+        return null;
+      }
+      function setDownload(id, metaId, asset, release, defaultUrl, label, fallbackMeta) {
+        var button = document.getElementById(id);
+        var meta = document.getElementById(metaId);
+        if (asset && asset.browser_download_url) {
+          button.href = asset.browser_download_url;
+          button.textContent = label;
+          button.className = "button " + (id === "ios-download" ? "button-secondary" : "button-primary") + " download-button";
+          button.setAttribute("download", "");
+          meta.textContent = release.tag_name + " · " + formatDate(release.published_at || release.created_at) + " · " + Math.max(1, Math.round((asset.size || 0) / 1024)) + " КБ";
+          return;
+        }
+        button.href = defaultUrl;
+        button.textContent = "Открыть сборки ↗";
+        meta.textContent = fallbackMeta;
+      }
+      function makeReleaseRow(release) {
+        var row = document.createElement("a");
+        row.className = "release-row";
+        row.href = release.html_url;
+        row.target = "_blank";
+        row.rel = "noopener noreferrer";
+        row.style.textDecoration = "none";
+        var mark = document.createElement("span");
+        mark.className = "release-mark";
+        mark.setAttribute("aria-hidden", "true");
+        var details = document.createElement("span");
+        var name = document.createElement("strong");
+        name.textContent = safeText(release.name || release.tag_name, 100);
+        var notes = document.createElement("p");
+        notes.textContent = safeText(release.body || (release.prerelease ? "Предварительный релиз." : "Опубликована версия FreeRoute."), 170);
+        details.appendChild(name);
+        details.appendChild(notes);
+        var date = document.createElement("time");
+        date.dateTime = release.published_at || release.created_at || "";
+        date.textContent = formatDate(release.published_at || release.created_at);
+        row.appendChild(mark);
+        row.appendChild(details);
+        row.appendChild(date);
+        return row;
+      }
+      async function loadReleases() {
+        var list = document.getElementById("release-list");
+        try {
+          var response = await fetch(api + "/releases?per_page=8", { headers: { "Accept": "application/vnd.github+json" }, cache: "no-store" });
+          if (!response.ok) throw new Error("GitHub API returned " + response.status);
+          var releases = (await response.json()).filter(function (release) { return !release.draft; });
+          if (!releases.length) {
+            document.getElementById("latest-version").textContent = "Первый релиз готовится";
+            document.getElementById("latest-date").textContent = "Сборки проходят CI; постоянных файлов релиза пока нет.";
+            document.getElementById("latest-notes").textContent = "Первая версия появится после публикации через GitHub Actions → Publish FreeRoute release. До этого доступны временные CI-сборки по ссылкам выше.";
+            list.textContent = "";
+            var empty = document.createElement("p");
+            empty.className = "empty-state";
+            empty.textContent = "Релизов пока нет. Список обновится автоматически, когда появится первая версия.";
+            list.appendChild(empty);
+            ["android-meta", "windows-meta"].forEach(function (id) { document.getElementById(id).textContent = "Временная сборка GitHub Actions"; });
+            document.getElementById("ios-meta").textContent = "Неподписанная тестовая сборка";
+            return;
+          }
+          var latest = releases[0];
+          document.getElementById("latest-version").textContent = safeText(latest.name || latest.tag_name, 80);
+          document.getElementById("latest-date").textContent = (latest.prerelease ? "Предварительный релиз · " : "Опубликовано · ") + formatDate(latest.published_at || latest.created_at);
+          document.getElementById("latest-notes").textContent = safeText(latest.body || "Описание изменений не добавлено.", 1400);
+          document.getElementById("release-page").href = latest.html_url;
+          setDownload("android-download", "android-meta", findAsset(latest, ["freeroute-android-debug.apk"]), latest, fallback.android, "Скачать APK ↓", "В релизе нет APK — открой CI-сборки");
+          setDownload("windows-download", "windows-meta", findAsset(latest, ["freeroute-windows-x64.zip"]), latest, fallback.windows, "Скачать ZIP ↓", "В релизе нет ZIP — открой CI-сборки");
+          setDownload("ios-download", "ios-meta", findAsset(latest, ["freeroute-ios-unsigned.zip"]), latest, fallback.ios, "Скачать пакет ↓", "Неподписанная сборка пока доступна в CI");
+          list.textContent = "";
+          releases.slice(0, 6).forEach(function (release) { list.appendChild(makeReleaseRow(release)); });
+        } catch (error) {
+          list.textContent = "";
+          var failure = document.createElement("p");
+          failure.className = "empty-state";
+          failure.textContent = "Не удалось загрузить список версий. Открой официальный список релизов GitHub.";
+          list.appendChild(failure);
+          document.getElementById("latest-date").textContent = "Список релизов временно недоступен.";
+          ["android", "windows", "ios"].forEach(function (key) {
+            var button = document.getElementById(key + "-download");
+            button.href = fallback[key];
+            button.textContent = "Открыть сборки ↗";
+          });
+        }
+      }
+      loadReleases();
+    }());
+  </script>
+</body>
+</html>

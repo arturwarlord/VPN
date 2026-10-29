@@ -1,5 +1,7 @@
 # FreeRoute VPN — our own VPN app
 
+**[Открыть сайт загрузок FreeRoute](https://arturwarlord.github.io/VPN/)** · [Релизы и история обновлений](https://github.com/arturwarlord/VPN/releases)
+
 We are building a custom VPN product for Android, Windows and iPhone. GitHub hosts our source code and build workflows; GitHub itself is not the VPN exit server.
 
 **Budget target: €0/month.** We will not rely on expiring trial credits or create paid resources without an explicit decision.

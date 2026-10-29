@@ -1,6 +1,7 @@
 name: Build FreeRoute Android APK
 
 on:
+  workflow_call:
   push:
     branches: [main]
     paths:
