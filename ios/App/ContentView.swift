@@ -35,6 +35,7 @@ struct ContentView: View {
 
     private let accent = Color(red: 0.32, green: 0.58, blue: 0.95)
     private let background = Color(red: 0.04, green: 0.06, blue: 0.12)
+    private let tunnelProviderBundleIdentifier = "com.arturwarlord.freeroute.network-extension"
 
     var body: some View {
         NavigationStack {
@@ -311,9 +312,11 @@ struct ContentView: View {
 
         do {
             let managers = try await loadAllManagers()
-            let manager = managers.first ?? NETunnelProviderManager()
+            let manager = managers.first {
+                ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == tunnelProviderBundleIdentifier
+            } ?? NETunnelProviderManager()
             let tunnelProtocol = NETunnelProviderProtocol()
-            tunnelProtocol.providerBundleIdentifier = "com.arturwarlord.freeroute.network-extension"
+            tunnelProtocol.providerBundleIdentifier = tunnelProviderBundleIdentifier
             tunnelProtocol.serverAddress = profile.name
 
             // Store the secret config in the app/extension shared Keychain group.
@@ -355,7 +358,10 @@ struct ContentView: View {
         defer { isBusy = false }
         do {
             let managers = try await loadAllManagers()
-            managers.first?.connection.stopVPNTunnel()
+            let manager = managers.first {
+                ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == tunnelProviderBundleIdentifier
+            }
+            manager?.connection.stopVPNTunnel()
             status = "VPN отключён"
         } catch {
             alertTitle = "Не удалось отключить VPN"
@@ -367,7 +373,10 @@ struct ContentView: View {
 
     private func refreshStatus() async {
         do {
-            let manager = try await loadAllManagers().first
+            let managers = try await loadAllManagers()
+            let manager = managers.first {
+                ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == tunnelProviderBundleIdentifier
+            }
             activeManager = manager
             guard let connection = manager?.connection else {
                 status = profiles.isEmpty ? "Ожидает настройки" : "Готов к подключению"
