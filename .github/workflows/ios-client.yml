@@ -1,0 +1,112 @@
+name: Build FreeRoute iOS app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-client.yml"
+  pull_request:
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-client.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios-unsigned:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Go for WireGuardKit
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+
+      - name: Install XcodeGen
+        shell: bash
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate Xcode project
+        shell: bash
+        run: xcodegen generate --spec project.yml
+        working-directory: ios
+
+      - name: Resolve Swift package dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies \
+            -project ios/FreeRoute.xcodeproj \
+            -scheme FreeRouteiOS \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -derivedDataPath "$RUNNER_TEMP/FreeRouteDerivedData"
+
+      - name: Build WireGuard Go bridge for iOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          GO_BRIDGE="$RUNNER_TEMP/SourcePackages/checkouts/wireguard-apple/Sources/WireGuardKitGo"
+          PRODUCTS="$RUNNER_TEMP/FreeRouteDerivedData/Build/Products/Release-iphoneos"
+          TEMP_BUILD="$RUNNER_TEMP/FreeRouteDerivedData/Build/Intermediates.noindex/WireGuardGoBridge"
+          test -f "$GO_BRIDGE/Makefile"
+          mkdir -p "$PRODUCTS" "$TEMP_BUILD"
+          make -C "$GO_BRIDGE" build \
+            PLATFORM_NAME=iphoneos \
+            ARCHS=arm64 \
+            SDKROOT="$(xcrun --sdk iphoneos --show-sdk-path)" \
+            CONFIGURATION_BUILD_DIR="$PRODUCTS" \
+            CONFIGURATION_TEMP_DIR="$TEMP_BUILD" \
+            CC="$(xcrun --sdk iphoneos --find clang)" \
+            LIPO="$(xcrun --find lipo)"
+          test -s "$PRODUCTS/libwg-go.a"
+
+      - name: Compile unsigned iOS app and Packet Tunnel extension
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project ios/FreeRoute.xcodeproj \
+            -scheme FreeRouteiOS \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$RUNNER_TEMP/FreeRouteDerivedData" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Verify app and extension outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/FreeRouteDerivedData/Build/Products/Release-iphoneos/FreeRoute.app"
+          test -d "$APP"
+          test -d "$APP/PlugIns/FreeRoutePacketTunnel.appex"
+          test -f "$APP/THIRD_PARTY_NOTICES.txt"
+          plutil -lint "$APP/Info.plist"
+          plutil -lint "$APP/PlugIns/FreeRoutePacketTunnel.appex/Info.plist"
+
+      - name: Package unsigned iOS build for inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/FreeRouteDerivedData/Build/Products/Release-iphoneos/FreeRoute.app"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$RUNNER_TEMP/freeroute-ios-unsigned.zip"
+
+      - name: Upload unsigned iOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: freeroute-ios-unsigned
+          path: ${{ runner.temp }}/freeroute-ios-unsigned.zip
+          if-no-files-found: error
+          retention-days: 14
