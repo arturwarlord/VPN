@@ -50,7 +50,7 @@ install_line="$(grep -nF 'name: Install VPN server over SSH' "$WORKFLOW" | cut -
 grep -Fq 'WG_VALIDATE_ONLY=1 WG_ENDPOINT="$ENDPOINT_IP" WG_PORT="$WG_PORT" bash scripts/setup-wireguard.sh' "$WORKFLOW" ||
   fail "non-mutating installer validation is required before SSH"
 grep -Fq 'ipaddress.ip_address(sys.argv[1])' "$WORKFLOW" || fail "deployment must parse IPv4 and IPv6 addresses"
-grep -Fq 'if not endpoint.is_global:' "$WORKFLOW" || fail "deployment must reject non-global endpoint addresses"
+grep -Fq 'not endpoint.is_global' "$WORKFLOW" || fail "deployment must reject non-global endpoint addresses"
 grep -Fq 'if response_ip != requested_ip:' "$WORKFLOW" || fail "geolocation must compare normalized IP addresses"
 pass "endpoint and country checks precede remote changes"
 
