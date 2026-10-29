@@ -10,6 +10,7 @@ FreeRoute is our custom app project. Users install the APK built from this repos
 - Uses the input file name as the profile label; the file name is not proof of the server's country.
 - Stores profiles only in the app-private internal storage directory.
 - Connects and disconnects using Android's VPN permission flow.
+- Offers a manual **Проверить страну выхода** action when the tunnel is connected. It displays the public IP and country reported by `ipwho.is`; it does not run automatically or store the result.
 - Uses WireGuard's embeddable tunnel engine through its published library API. Our UI and application flow are developed in this repository.
 - Does not upload profiles or private keys to GitHub or a remote account service.
 
@@ -23,8 +24,9 @@ The debug APK is unsigned for distribution purposes and intended for personal in
 
 - There is no working country catalogue or server inventory yet. The country visible to websites is determined by the configured remote VPN endpoint, not by the client UI or profile label.
 - A reachable server outside Russia is still required for country switching.
-- Windows and iOS client apps are not implemented yet.
+- Country discovery is only a diagnostic of the active connection, not a list of free VPN servers or a country selector.
 - Full-tunnel IPv6/DNS leak testing and kill-switch behavior must be completed before relying on this app.
+- The manual country check sends the current public IP as seen by the IP-geolocation service. If the tunnel drops during the request, that service may see the normal internet connection IP instead.
 - Background operation on Xiaomi/POCO devices may require the user to allow background activity and disable battery restrictions. This needs real-device testing on the POCO X4 Pro 5G.
 
 ## Security
