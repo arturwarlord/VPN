@@ -22,7 +22,9 @@ jobs:
           bash -n scripts/setup-wireguard.sh
           bash -n scripts/diagnose-wireguard-server.sh
           bash -n scripts/check-workflow-shell.sh
+          bash -n tests/validate-endpoint.sh
           bash scripts/check-workflow-shell.sh
+          bash tests/validate-endpoint.sh
 
       - name: Check required project files and build settings
         shell: bash
@@ -35,6 +37,7 @@ jobs:
           grep -q 'attempting to restore the previous config' scripts/setup-wireguard.sh
           test -s scripts/diagnose-wireguard-server.sh
           test -s scripts/check-workflow-shell.sh
+          test -s tests/validate-endpoint.sh
           test -s settings.gradle.kts
           test -s gradle.properties
           grep -q '^android.useAndroidX=true$' gradle.properties
