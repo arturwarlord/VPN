@@ -41,6 +41,7 @@ targets:
     sources:
       - PacketTunnel/PacketTunnelProvider.swift
       - Shared/TunnelConfiguration+WgQuickConfig.swift
+      - Shared/String+ArrayConversion.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.arturwarlord.freeroute.network-extension
