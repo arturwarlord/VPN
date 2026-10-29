@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
@@ -33,7 +35,9 @@ internal sealed class MainForm : Form
     private readonly Button _importButton;
     private readonly Button _connectButton;
     private readonly Button _disconnectButton;
+    private readonly Button _checkCountryButton;
     private bool _busy;
+    private bool _checkingExitCountry;
     private string? _connectedProfileName;
 
     private string BundledEngineDirectory => Path.Combine(AppContext.BaseDirectory, "wireguard");
@@ -108,7 +112,7 @@ internal sealed class MainForm : Form
 
         var buttons = new FlowLayoutPanel
         {
-            Width = 590,
+            Width = 610,
             Height = 52,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
@@ -126,11 +130,15 @@ internal sealed class MainForm : Form
         _disconnectButton = MakeButton("Отключить", Color.FromArgb(74, 83, 104), 120);
         _disconnectButton.Click += async (_, _) => await DisconnectAsync();
         buttons.Controls.Add(_disconnectButton);
+
+        _checkCountryButton = MakeButton("Проверить страну", Color.FromArgb(52, 83, 133), 150);
+        _checkCountryButton.Click += async (_, _) => await CheckExitCountryAsync();
+        buttons.Controls.Add(_checkCountryButton);
         layout.Controls.Add(buttons);
 
         var note = new Label
         {
-            Text = "Имя профиля не подтверждает страну сервера. Выходная страна определяется адресом удалённого узла. Перед подключением приложение предупреждает об отсутствующем IPv6-маршруте.",
+            Text = "Имя профиля не подтверждает страну сервера. Проверка по кнопке отправляет текущий публичный IP сервису ipwho.is; это приблизительная геолокация, запрос не выполняется автоматически. Если туннель отключится во время проверки, сервис может увидеть IP основного подключения.",
             ForeColor = Color.FromArgb(140, 153, 177),
             Width = 590,
             Height = 62
@@ -334,6 +342,59 @@ internal sealed class MainForm : Form
         }
     }
 
+    private async Task CheckExitCountryAsync()
+    {
+        if (_busy || _connectedProfileName is null || _checkingExitCountry)
+            return;
+
+        _checkingExitCountry = true;
+        UpdateButtons();
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(12) };
+            using var response = await client.GetAsync(
+                "https://ipwho.is/?fields=success,ip,country,country_code");
+            response.EnsureSuccessStatusCode();
+
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var document = await JsonDocument.ParseAsync(stream);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("success", out var success) ||
+                success.ValueKind != JsonValueKind.True)
+            {
+                throw new InvalidOperationException("Сервис не смог определить страну текущего IP.");
+            }
+
+            var ip = root.TryGetProperty("ip", out var ipElement) ? ipElement.GetString() : null;
+            var country = root.TryGetProperty("country", out var countryElement) ? countryElement.GetString() : null;
+            var countryCode = root.TryGetProperty("country_code", out var codeElement) ? codeElement.GetString() : null;
+            if (string.IsNullOrWhiteSpace(ip) || string.IsNullOrWhiteSpace(country) || countryCode?.Length != 2)
+                throw new InvalidOperationException("Сервис вернул неполные сведения о стране.");
+
+            MessageBox.Show(
+                this,
+                "Публичный IP: " + ip + "\nОпределяемая страна: " + country + " (" + countryCode + ")" +
+                "\n\nЭто геолокация по IP, а не абсолютная гарантия. Результат не сохраняется. Если туннель отключился во время проверки, сервис может увидеть IP основного подключения.",
+                "Проверка страны выхода",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                "Не удалось проверить страну. Проверь VPN-подключение и доступность сервиса геолокации.\n\n" + ex.Message,
+                "Проверка страны выхода",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            _checkingExitCountry = false;
+            UpdateButtons();
+        }
+    }
+
     private async Task DisconnectAsync()
     {
         if (_busy)
@@ -471,5 +532,6 @@ internal sealed class MainForm : Form
         _profiles.Enabled = !_busy && _connectedProfileName is null;
         _connectButton.Enabled = !_busy && SelectedProfile is not null;
         _disconnectButton.Enabled = !_busy && _connectedProfileName is not null;
+        _checkCountryButton.Enabled = !_busy && !_checkingExitCountry && _connectedProfileName is not null;
     }
 }
