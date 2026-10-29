@@ -19,8 +19,11 @@ wg show wg0 >/dev/null || fail "WireGuard did not return interface status."
 wan_if="$(ip -4 route show default | awk 'NR==1 {print $5}')"
 [[ -n "$wan_if" ]] || fail "Cannot detect the default IPv4 interface."
 iptables -t nat -C POSTROUTING -s 10.77.0.0/24 -o "$wan_if" -j MASQUERADE || fail "VPN subnet NAT rule is missing."
-iptables -C FORWARD -i wg0 -j ACCEPT || fail "Incoming WireGuard forwarding rule is missing."
-iptables -C FORWARD -o wg0 -j ACCEPT || fail "Outgoing WireGuard forwarding rule is missing."
+iptables -C FORWARD -i wg0 -o "$wan_if" -j ACCEPT || fail "Internet-bound WireGuard forwarding rule is missing."
+iptables -C FORWARD -i "$wan_if" -o wg0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT || fail "Established return-traffic forwarding rule is missing."
+if iptables -C FORWARD -i wg0 -j ACCEPT >/dev/null 2>&1; then
+  fail "Overly broad forwarding rule permits traffic from VPN clients to arbitrary interfaces."
+fi
 
 for name in windows android iphone; do
   file="/root/wireguard-clients/$name.conf"
