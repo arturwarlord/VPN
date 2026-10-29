@@ -7,6 +7,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 ## Current status
 
 - [x] Ubuntu/Debian WireGuard server bootstrap script with explicit endpoint validation, safe permissions and rollback if service startup fails.
+- [x] Server installer builds a restrictive IPv4 forwarding chain: internet-only egress, private/reserved-range filtering, and no access from VPN clients to services on the VPN host.
 - [x] 24 automated endpoint-validation tests for malformed, private, local, special-purpose and otherwise non-public addresses/ports.
 - [x] Manual GitHub Actions server-deployment workflow with verified SSH host-key pinning.
 - [x] Read-only server diagnostics that do not print private client profiles.
@@ -26,7 +27,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 The VPN service is **not live yet**. No server has been provisioned or deployed. The country websites see is determined by the remote server's network location, not by a label in the app.
 
-Latest repository validation (including all 24 endpoint tests): [GitHub Actions CI run](https://github.com/arturwarlord/VPN/actions/runs/40955025275).
+Latest repository validation (including all 24 endpoint tests): [GitHub Actions CI run](https://github.com/arturwarlord/VPN/actions/runs/40955982482).
 
 ## Android client
 
@@ -90,7 +91,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 
 ## Security and testing limitations
 
-- The server setup currently tunnels IPv4 only; full IPv6 tunneling is not configured. Client apps warn when a profile has no IPv6 default route, but that warning is not a complete leak-prevention mechanism.
+- The server firewall restricts IPv4 forwarding to public internet egress and blocks VPN-client access to private/reserved IPv4 ranges and host services. The setup still does not route IPv6; the client warning is not a complete leak-prevention mechanism.
 - DNS behavior, server routing and kill-switch behavior still need end-to-end testing.
 - No country selector backed by real servers exists yet. Imported profile names are labels only.
 - Android sleep/resume and POCO battery restrictions have not been verified on the user's phone.
