@@ -35,6 +35,9 @@ jobs:
           grep -q 'Set WG_ENDPOINT' scripts/setup-wireguard.sh
           grep -q 'FreeRoute managed WireGuard configuration' scripts/setup-wireguard.sh
           grep -q 'attempting to restore the previous config' scripts/setup-wireguard.sh
+          grep -q 'iptables -A FORWARD -i wg0 -o' scripts/setup-wireguard.sh
+          grep -q -- '--ctstate RELATED,ESTABLISHED' scripts/setup-wireguard.sh
+          ! grep -q 'iptables -A FORWARD -i wg0 -j ACCEPT' scripts/setup-wireguard.sh
           test -s scripts/diagnose-wireguard-server.sh
           grep -q 'NAT rule is missing' scripts/diagnose-wireguard-server.sh
           grep -q 'forwarding rule is missing' scripts/diagnose-wireguard-server.sh
@@ -68,6 +71,8 @@ jobs:
           grep -q 'diagnose-wireguard-server.sh' .github/workflows/diagnose-server.yml
           grep -q workflow_dispatch .github/workflows/deploy.yml
           grep -q 'WG_VALIDATE_ONLY=1' .github/workflows/deploy.yml
+          grep -q 'ipwho.is' .github/workflows/deploy.yml
+          grep -q 'country_code == "RU"' .github/workflows/deploy.yml
           grep -q 'VPN_KNOWN_HOSTS' .github/workflows/deploy.yml
           ! grep -q 'ssh-keyscan' .github/workflows/deploy.yml
           grep -q 'StrictHostKeyChecking=yes' .github/workflows/deploy.yml
