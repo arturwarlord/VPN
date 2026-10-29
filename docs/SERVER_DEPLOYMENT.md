@@ -39,6 +39,8 @@ After the free server and its network firewall are confirmed:
 2. Enter the server's public IPv4 address as `endpoint_ip` and the allowed UDP port.
 3. Review the run. It first verifies the pinned SSH host key and non-interactive sudo before sending the installer.
 
+Before SSH deployment, the workflow queries the free HTTPS geolocation endpoint `ipwho.is` for the provided public endpoint and refuses deployment if the reported country is Russia or the API cannot return a valid matching IP/country. This is a best-effort database lookup, not cryptographic proof of the server's location. Cross-check the provider's region and verify the actual exit IP from a connected client. This lookup sends the already-public endpoint IP to that third-party API; see [its documentation](https://ipwhois.io/ru/documentation).
+
 The installer:
 - Refuses to proceed without a valid explicit public IPv4 endpoint and valid port.
 - Refuses to overwrite an existing `/etc/wireguard/wg0.conf` unless it carries the FreeRoute managed marker.
@@ -55,7 +57,7 @@ Open **Actions → Diagnose WireGuard server → Run workflow** after deployment
 - `wg-quick@wg0` is active and enabled at boot.
 - The managed config is present with permissions 600.
 - IPv4 forwarding is enabled.
-- The IPv4 NAT masquerade rule and both WireGuard forwarding rules exist in iptables.
+- The IPv4 NAT masquerade rule and both WireGuard forwarding rules exist in iptables, and the broad client-to-anywhere forwarding rule is absent.
 - Windows, Android and iPhone profiles exist with permissions 600 and no placeholder endpoint.
 
 It prints counts and status only; it does not print any private keys or client profile contents. The check cannot verify the provider's external firewall, whether the client has connected, or whether a public-IP/geolocation lookup returns the expected country.
