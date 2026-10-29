@@ -11,10 +11,9 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [x] Native Android client with local multi-profile management, connect/disconnect controls and an IPv6-route warning.
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
-- [x] iOS SwiftUI app and Packet Tunnel extension source scaffolded.
-- [ ] Complete and verify the iOS build in GitHub Actions.
+- [x] iOS SwiftUI app and Packet Tunnel extension compile successfully as an unsigned build in GitHub Actions.
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
-- [ ] Sign the iOS app with an Apple developer team that has the required Network Extension entitlement.
+- [ ] Sign and install the iOS app with an Apple developer team that has the required Network Extension entitlement.
 - [ ] Find a sustainable, genuinely free VPN exit node outside Russia.
 - [ ] Deploy a server and verify public IP, DNS and IPv6 behavior.
 - [ ] Verify end-to-end country switching on all clients.
@@ -25,10 +24,7 @@ The VPN service is **not live yet**. No server has been provisioned or deployed.
 
 Source: `app/`. FreeRoute has its own native UI, local profile picker, profile import, connect/disconnect flow, and an IPv6-route warning. It embeds WireGuard's tunnel engine as a library; it does not require the user to install a separate WireGuard consumer app. Imported profiles stay in the app's private storage and are not uploaded to GitHub.
 
-To obtain the test APK:
-1. Open [Build FreeRoute Android APK](https://github.com/arturwarlord/VPN/actions/workflows/android-client.yml).
-2. Open the latest successful run and download the `freeroute-android-debug` artifact.
-3. Extract the file named `app-debug.apk` from the artifact and install it for personal testing.
+A debug APK has been built successfully. You can download it from [this verified build artifact](https://github.com/arturwarlord/VPN/actions/runs/40945904848) or use [Build FreeRoute Android APK](https://github.com/arturwarlord/VPN/actions/workflows/android-client.yml).
 
 This is a debug build, not a release-signed public distribution. The app cannot connect until a valid profile for a reachable server is available. On POCO/Xiaomi, background and battery-restriction behavior still needs real-device testing.
 
@@ -47,8 +43,8 @@ Details: [Windows client notes](docs/WINDOWS_CLIENT.md).
 
 ## iPhone client
 
-Source: `ios/`. The SwiftUI app and Network Extension Packet Tunnel provider use the embeddable WireGuardKit engine. The workflow compiles an unsigned build for inspection:
-[Open the iOS build workflow](https://github.com/arturwarlord/VPN/actions/workflows/ios-client.yml)
+Source: `ios/`. The SwiftUI app and Network Extension Packet Tunnel provider use the embeddable WireGuardKit engine. The unsigned app build and Packet Tunnel extension now compile, pass bundle-metadata checks, and are packaged by GitHub Actions:
+[Open the successful iOS build](https://github.com/arturwarlord/VPN/actions/runs/40948864901)
 
 An unsigned CI build cannot be installed as a working VPN on a personal iPhone. Installation and operation require signing with an Apple developer team and provisioning the Packet Tunnel Network Extension entitlement. The actual tunnel must also be tested against a reachable endpoint.
 
