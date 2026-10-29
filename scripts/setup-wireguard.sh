@@ -18,9 +18,32 @@ for octet in "${endpoint_octets[@]}"; do
   [[ "${#octet}" -eq 1 || "$octet" != 0* ]] || fail "WG_ENDPOINT must use canonical IPv4 notation."
   (( 10#$octet <= 255 )) || fail "WG_ENDPOINT contains an octet above 255."
 done
+a="${endpoint_octets[0]}"; b="${endpoint_octets[1]}"; c="${endpoint_octets[2]}"
+if (( a == 0 || a == 10 || a == 127 || a >= 224 )); then
+  fail "WG_ENDPOINT must be a globally routable public IPv4 address."
+fi
+if (( a == 100 && b >= 64 && b <= 127 )); then
+  fail "WG_ENDPOINT cannot use a carrier-grade NAT address."
+fi
+if (( a == 169 && b == 254 )); then
+  fail "WG_ENDPOINT cannot use a link-local address."
+fi
+if (( a == 172 && b >= 16 && b <= 31 )); then
+  fail "WG_ENDPOINT cannot use a private IPv4 address."
+fi
+if (( a == 192 && b == 168 )); then
+  fail "WG_ENDPOINT cannot use a private IPv4 address."
+fi
+if (( a == 192 && b == 0 && c == 2 )) || (( a == 198 && b == 51 && c == 100 )) || (( a == 203 && b == 0 && c == 113 )); then
+  fail "WG_ENDPOINT cannot use a documentation-only IPv4 address."
+fi
+if (( a == 198 && (b == 18 || b == 19) )); then
+  fail "WG_ENDPOINT cannot use a benchmarking-only IPv4 address."
+fi
 
 PORT="${WG_PORT:-51820}"
 [[ "$PORT" =~ ^[0-9]{1,5}$ ]] || fail "WG_PORT must be an integer from 1 to 65535."
+[[ "$PORT" == "0" || "${PORT:0:1}" != "0" ]] || fail "WG_PORT must not contain leading zeroes."
 (( 10#$PORT >= 1 && 10#$PORT <= 65535 )) || fail "WG_PORT must be an integer from 1 to 65535."
 
 CONFIG="/etc/wireguard/wg0.conf"
@@ -47,7 +70,7 @@ SERVER_PUBLIC="$(printf '%s' "$SERVER_PRIVATE" | wg pubkey)"
 # Build a complete candidate config, then replace the active config atomically.
 CONFIG_TMP="$(mktemp /etc/wireguard/wg0.conf.XXXXXX)"
 chmod 600 "$CONFIG_TMP"
-trap 'rm -f "${CONFIG_TMP:-}"' EXIT
+trap 'if [[ -n "${CONFIG_TMP:-}" ]]; then rm -f "$CONFIG_TMP"; fi' EXIT
 
 cat > "$CONFIG_TMP" <<EOF
 # FreeRoute managed WireGuard configuration
