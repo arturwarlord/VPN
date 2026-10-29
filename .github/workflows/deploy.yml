@@ -62,6 +62,9 @@ jobs:
           if not 1 <= port <= 65535 or str(port) != sys.argv[2]:
               raise SystemExit("port must be a canonical integer from 1 to 65535.")
           PY
+          # Run the exact same strict, non-mutating checks as the remote installer
+          # so special-purpose ranges rejected by it cannot reach the deployment step.
+          WG_VALIDATE_ONLY=1 WG_ENDPOINT="$ENDPOINT_IP" WG_PORT="$WG_PORT" bash scripts/setup-wireguard.sh
           printf '%s\n' "$VPN_SSH_KEY" > "$RUNNER_TEMP/vpn_key"
           chmod 600 "$RUNNER_TEMP/vpn_key"
           printf '%s\n' "$VPN_KNOWN_HOSTS" > "$RUNNER_TEMP/vpn_known_hosts"
