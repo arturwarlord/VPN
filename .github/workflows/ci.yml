@@ -31,13 +31,18 @@ jobs:
           test -s app/src/main/AndroidManifest.xml
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s docs/ANDROID_CLIENT.md
+          test -s windows/FreeRoute.Windows.csproj
+          test -s windows/MainForm.cs
+          test -s docs/WINDOWS_CLIENT.md
           grep -q workflow_dispatch .github/workflows/deploy.yml
           grep -q assembleDebug .github/workflows/android-client.yml
 
       - name: Check tracked files for private key material
         shell: bash
         run: |
-          if git grep -n -E 'BEGIN (OPENSSH|RSA|EC) PRIVATE KEY|PrivateKey[[:space:]]*=' -- ':!scripts/setup-wireguard.sh' ':!README.md'; then
+          # Match a real key value on a config-like line, not code that validates
+          # or documents the PrivateKey field name.
+          if git grep -n -E 'BEGIN (OPENSSH|RSA|EC) PRIVATE KEY|^[[:space:]]*PrivateKey[[:space:]]*=[[:space:]]*[A-Za-z0-9+/]{40,}={0,2}$' -- ':!scripts/setup-wireguard.sh' ':!README.md' ':!windows/THIRD_PARTY_NOTICES.txt'; then
             echo "Potential private key material detected in tracked files." >&2
             exit 1
           fi
