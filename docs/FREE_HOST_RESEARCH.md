@@ -5,7 +5,7 @@
 
 ## Decision summary
 
-No candidate below is currently approved as a dependable long-term exit server for personal traffic. The server scripts and clients may continue to be developed without provisioning any host. Do not enter payment details, enable a paid plan, or create billable resources as part of this project unless the user explicitly changes the €0 constraint.
+No candidate below is currently approved as a dependable long-term exit server for personal traffic. The server scripts and clients may continue to be developed without provisioning any host. Do not enter payment details, enable a paid plan, or create billable resources as part of this project unless the user explicitly changes the €0 constraint. TheUltraHost is the closest newly found conditional lab candidate, but it requires student verification, periodic manual keep-alive, and an IPv6 endpoint path that FreeRoute does not yet implement; it is not approved for deployment.
 
 ## Candidates reviewed
 
@@ -58,6 +58,30 @@ Official reference: https://vyce.cloud/
 The current official site advertises root SSH, KVM, a dedicated IPv4 and IPv6, but also states the free instance is a promotional trial, typically **1–3 months**, and asks for a credit card for verification. It is not a long-term guaranteed free exit server under the project's rules, so do not create it for FreeRoute.
 
 Official reference: https://alavps.com/ (FAQ and pricing sections)
+
+### TheUltraHost student VPS — conditional lab candidate, not a permanent endpoint
+
+The official free plan advertises a KVM VPS with root access, 1 shared vCPU, 1 GB RAM, 15 GB NVMe, 250 GB/month, an IPv6 /64 and 20 NAT IPv4 forwarded ports. The provider explicitly describes a personal VPN over IPv6 as a possible use, but says public proxies are not allowed. Eligibility requires current student verification, and the server must be manually kept alive once every 30 days; otherwise it pauses after a further grace period.
+
+This is the most relevant newly found candidate for a **short controlled prototype** if the account qualifies: a WireGuard endpoint might be reachable over native IPv6, and the forwarded IPv4 ports may be useful for client networks. However:
+- The current FreeRoute deploy workflow accepts only global IPv4 endpoints; it does not support an IPv6 endpoint yet.
+- The exact forwarded-port protocol options and IPv4 egress behavior still need verification before relying on it.
+- The 30-day manual keep-alive means it is not a fully unattended always-on endpoint.
+- Student eligibility is not assumed. Do not create an account or send profile/private-key material until eligibility, allowed personal VPN use, and actual UDP reachability are confirmed.
+
+Official references:
+- Plan and requirements: https://theultrahost.com/free-vps
+- Student verification: https://theultrahost.com/students
+
+### VPSWala Starter — not suitable without further verification
+
+The provider's current homepage advertises an always-free ARM64 VPS with root SSH, 2 GB RAM, 10 GB/month bandwidth and only 500 MB NVMe storage. Another VPSWala page describes different resources and a 30-day free trial, so the exact plan and IP/network terms are not consistent across current public descriptions. The pages do not establish a reliable, externally reachable UDP endpoint with sufficient disk/traffic for a regular full-tunnel VPN.
+
+Do not use it for a personal exit server unless the provider confirms the exact zero-cost plan, public address and inbound UDP path in writing. A short-lived trial is not a substitute for a permanent €0 host.
+
+Official references:
+- Current homepage: https://vpswala.org/
+- Plan details: https://vpswala.org/free-vps.html
 
 ### EUserv VS2-free — possible lab, not a dependable exit node
 
