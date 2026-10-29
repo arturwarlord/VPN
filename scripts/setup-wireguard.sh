@@ -65,7 +65,21 @@ if [[ -e "$CONFIG" ]]; then
   grep -Fq '# FreeRoute managed WireGuard configuration' "$CONFIG" || \
     fail "$CONFIG already exists but is not marked as managed by FreeRoute. Back it up and review it manually before replacing it."
 
-  existing_peer_count="$(grep -cE '^[[:space:]]*\[Peer\][[:space:]]*apt-get update
+  existing_peer_count="$(grep -cE '^[[:space:]]*\[Peer\][[:space:]]*$' "$CONFIG" || true)"
+  if [[ "$existing_peer_count" != "3" ]]; then
+    fail "The managed config has $existing_peer_count peers; this installer manages exactly windows/android/iphone. Refusing to drop or rewrite custom peers."
+  fi
+
+  for managed_peer in windows android iphone; do
+    marker_count="$(grep -Fc "# $managed_peer" "$CONFIG" || true)"
+    if [[ "$marker_count" != "1" ]]; then
+      fail "The existing config does not contain exactly one '# $managed_peer' marker; refusing to replace a potentially customized peer list."
+    fi
+  done
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
 apt-get install -y wireguard wireguard-tools iptables iproute2
 
 WAN_IF="$(ip -4 route show default | awk 'NR==1 {print $5}')"
