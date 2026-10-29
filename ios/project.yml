@@ -7,8 +7,7 @@ options:
 
 packages:
   WireGuardApple:
-    url: https://github.com/WireGuard/wireguard-apple.git
-    branch: master
+    path: vendor/wireguard-apple
 
 targets:
   FreeRouteiOS:
