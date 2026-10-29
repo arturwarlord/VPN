@@ -190,5 +190,5 @@ done
 echo "WireGuard configured and service is active."
 echo "Client profiles were generated on the VPS under /root/wireguard-clients (mode 600); they were not printed or uploaded."
 echo "Server public key: ${SERVER_PUBLIC}"
-echo "Public endpoint: ${WG_ENDPOINT}:${PORT}/udp"
+echo "Public endpoint: ${ENDPOINT_HOST}:${PORT}/udp"
 echo "IPv6 policy: client IPv6 is routed into WireGuard and explicitly blocked at the server; IPv6 internet access remains unavailable until native IPv6 egress is implemented and tested."
