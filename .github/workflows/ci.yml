@@ -65,10 +65,13 @@ jobs:
           test -s tests/validate-download-site.sh
           test -s index.html
           test -s .github/workflows/release.yml
+          test -s .github/workflows/cleanup-draft-releases.yml
           grep -q 'workflow_call:' .github/workflows/android-client.yml
           grep -q 'workflow_call:' .github/workflows/windows-client.yml
           grep -q 'workflow_call:' .github/workflows/ios-client.yml
           grep -q 'gh release create' .github/workflows/release.yml
+          grep -q 'cancel-in-progress: true' .github/workflows/release.yml
+          grep -q 'maintenance/cleanup-release-drafts' .github/workflows/cleanup-draft-releases.yml
           test -s settings.gradle.kts
           test -s gradle.properties
           grep -q '^android.useAndroidX=true$' gradle.properties
