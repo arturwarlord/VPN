@@ -36,6 +36,8 @@ This is a debug build, not a release-signed public distribution. The app cannot 
 
 Details: [Android client notes](docs/ANDROID_CLIENT.md).
 
+For a temporary real-tunnel smoke test before our own server exists, see [Client smoke test](docs/CLIENT_SMOKE_TEST.md). This uses a third-party provider endpoint and does not count as a FreeRoute server.
+
 ## Windows client
 
 Source: `windows/`. The Windows client provides its own profile list, import, connection and disconnection controls. The build workflow checks the Authenticode signature of the official WireGuard Windows MSI before extracting the tunnel engine into the FreeRoute package. The engine is bundled, so a user should not need to install a separate VPN consumer app.
