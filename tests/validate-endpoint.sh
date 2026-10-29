@@ -40,6 +40,22 @@ expect_invalid() {
   fi
 }
 
+expect_ipv6_authority() {
+  local endpoint="$1"
+  local port="$2"
+  local expected="$3"
+  local output
+  if output="$(WG_VALIDATE_ONLY=1 WG_ENDPOINT="$endpoint" WG_PORT="$port" bash "$INSTALLER" 2>&1)" &&
+     [[ "$output" == *"WireGuard endpoint authority: $expected:$port"* ]]; then
+    echo "PASS IPv6 endpoint authority is bracketed"
+    ((passed += 1))
+  else
+    echo "FAIL IPv6 endpoint authority is not bracketed as expected: $endpoint:$port" >&2
+    echo "$output" >&2
+    ((failed += 1))
+  fi
+}
+
 expect_missing_endpoint() {
   local output
   if output="$(env -u WG_ENDPOINT WG_VALIDATE_ONLY=1 WG_PORT=51820 bash "$INSTALLER" 2>&1)"; then
@@ -54,6 +70,9 @@ expect_missing_endpoint() {
 expect_valid "1.1.1.1" "51820"
 expect_valid "8.8.8.8" "1"
 expect_valid "1.0.0.1" "65535"
+expect_valid "2606:4700:4700::1111" "51820"
+expect_valid "2001:4860:4860::8888" "1"
+expect_ipv6_authority "2606:4700:4700::1111" "51820" "[2606:4700:4700::1111]"
 
 expect_missing_endpoint
 expect_invalid "10.0.0.1" "51820" "private IPv4"
@@ -76,6 +95,13 @@ expect_invalid "1.1.1.1" "0" "zero port"
 expect_invalid "1.1.1.1" "65536" "port above 65535"
 expect_invalid "1.1.1.1" "abc" "non-numeric port"
 expect_invalid "1.1.1.1" "0080" "leading-zero port"
+expect_invalid "fd00::1" "51820" "IPv6 unique-local address"
+expect_invalid "fe80::1" "51820" "IPv6 link-local address"
+expect_invalid "::1" "51820" "IPv6 loopback"
+expect_invalid "::" "51820" "IPv6 unspecified address"
+expect_invalid "ff02::1" "51820" "IPv6 multicast"
+expect_invalid "2001:db8::1" "51820" "IPv6 documentation address"
+expect_invalid "::ffff:8.8.8.8" "51820" "IPv4-mapped IPv6 address"
 
 echo "Endpoint validation tests: $passed passed; $failed failed."
 (( failed == 0 )) || exit 1
