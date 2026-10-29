@@ -55,6 +55,7 @@ Open **Actions → Diagnose WireGuard server → Run workflow** after deployment
 - `wg-quick@wg0` is active and enabled at boot.
 - The managed config is present with permissions 600.
 - IPv4 forwarding is enabled.
+- The IPv4 NAT masquerade rule and both WireGuard forwarding rules exist in iptables.
 - Windows, Android and iPhone profiles exist with permissions 600 and no placeholder endpoint.
 
 It prints counts and status only; it does not print any private keys or client profile contents. The check cannot verify the provider's external firewall, whether the client has connected, or whether a public-IP/geolocation lookup returns the expected country.
