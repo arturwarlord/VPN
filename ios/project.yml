@@ -1,0 +1,68 @@
+name: FreeRoute
+options:
+  bundleIdPrefix: com.arturwarlord.freeroute
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  WireGuardApple:
+    url: https://github.com/WireGuard/wireguard-apple.git
+    branch: master
+
+targets:
+  FreeRouteiOS:
+    type: application
+    platform: iOS
+    sources:
+      - App/FreeRouteIOSApp.swift
+      - App/ContentView.swift
+    resources:
+      - Resources/THIRD_PARTY_NOTICES.txt
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.arturwarlord.freeroute
+        PRODUCT_NAME: FreeRoute
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: FreeRoute VPN
+        CODE_SIGN_ENTITLEMENTS: App/FreeRoute.entitlements
+        CODE_SIGNING_ALLOWED: NO
+    dependencies:
+      - sdk: NetworkExtension.framework
+
+  FreeRoutePacketTunnel:
+    type: app-extension
+    platform: iOS
+    sources:
+      - PacketTunnel/PacketTunnelProvider.swift
+      - Shared/TunnelConfiguration+WgQuickConfig.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.arturwarlord.freeroute.network-extension
+        PRODUCT_NAME: FreeRoutePacketTunnel
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: PacketTunnel/Info.plist
+        CODE_SIGN_ENTITLEMENTS: PacketTunnel/FreeRoutePacketTunnel.entitlements
+        SKIP_INSTALL: YES
+        CODE_SIGNING_ALLOWED: NO
+    dependencies:
+      - package: WireGuardApple
+        product: WireGuardKit
+      - sdk: NetworkExtension.framework
+
+schemes:
+  FreeRouteiOS:
+    build:
+      targets:
+        FreeRouteiOS: all
+        FreeRoutePacketTunnel: all
+    run:
+      config: Debug
+    archive:
+      config: Release
