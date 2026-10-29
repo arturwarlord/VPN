@@ -1,20 +1,56 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 umask 077
-[[ "$(id -u)" -eq 0 ]] || { echo "Run as root." >&2; exit 1; }
-command -v apt-get >/dev/null || { echo "Ubuntu/Debian with apt-get required." >&2; exit 1; }
+
+fail() { echo "ERROR: $*" >&2; exit 1; }
+
+[[ "$(id -u)" -eq 0 ]] || fail "Run as root."
+command -v apt-get >/dev/null || fail "Ubuntu/Debian with apt-get required."
+
+# Require an explicit, syntactically valid public IPv4 endpoint so the generated
+# profiles can never silently contain a placeholder address.
+WG_ENDPOINT="${WG_ENDPOINT:-}"
+[[ -n "$WG_ENDPOINT" ]] || fail "Set WG_ENDPOINT to this server's public IPv4 address."
+[[ "$WG_ENDPOINT" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || fail "WG_ENDPOINT must be an IPv4 address."
+IFS='.' read -r -a endpoint_octets <<< "$WG_ENDPOINT"
+for octet in "${endpoint_octets[@]}"; do
+  [[ "$octet" =~ ^[0-9]{1,3}$ ]] || fail "WG_ENDPOINT must be an IPv4 address."
+  [[ "${#octet}" -eq 1 || "$octet" != 0* ]] || fail "WG_ENDPOINT must use canonical IPv4 notation."
+  (( 10#$octet <= 255 )) || fail "WG_ENDPOINT contains an octet above 255."
+done
+
+PORT="${WG_PORT:-51820}"
+[[ "$PORT" =~ ^[0-9]{1,5}$ ]] || fail "WG_PORT must be an integer from 1 to 65535."
+(( 10#$PORT >= 1 && 10#$PORT <= 65535 )) || fail "WG_PORT must be an integer from 1 to 65535."
+
+CONFIG="/etc/wireguard/wg0.conf"
+# Never silently erase an existing, unrelated WireGuard configuration.
+if [[ -e "$CONFIG" ]] && ! grep -Fq '# FreeRoute managed WireGuard configuration' "$CONFIG"; then
+  fail "$CONFIG already exists but is not marked as managed by FreeRoute. Back it up and review it manually before replacing it."
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y wireguard wireguard-tools iptables iproute2
+
 WAN_IF="$(ip -4 route show default | awk 'NR==1 {print $5}')"
-[[ -n "$WAN_IF" ]] || { echo "Cannot detect default network interface." >&2; exit 1; }
+[[ -n "$WAN_IF" ]] || fail "Cannot detect default network interface."
+
 install -d -m 700 /etc/wireguard /etc/wireguard/clients /root/wireguard-clients
-if [[ ! -s /etc/wireguard/server_private.key ]]; then wg genkey > /etc/wireguard/server_private.key; fi
+if [[ ! -s /etc/wireguard/server_private.key ]]; then
+  wg genkey > /etc/wireguard/server_private.key
+fi
 chmod 600 /etc/wireguard/server_private.key
 SERVER_PRIVATE="$(cat /etc/wireguard/server_private.key)"
 SERVER_PUBLIC="$(printf '%s' "$SERVER_PRIVATE" | wg pubkey)"
-PORT="${WG_PORT:-51820}"
-cat > /etc/wireguard/wg0.conf <<EOF
+
+# Build a complete candidate config, then replace the active config atomically.
+CONFIG_TMP="$(mktemp /etc/wireguard/wg0.conf.XXXXXX)"
+chmod 600 "$CONFIG_TMP"
+trap 'rm -f "${CONFIG_TMP:-}"' EXIT
+
+cat > "$CONFIG_TMP" <<EOF
+# FreeRoute managed WireGuard configuration
 [Interface]
 Address = 10.77.0.1/24
 ListenPort = ${PORT}
@@ -23,27 +59,34 @@ SaveConfig = false
 PostUp = iptables -t nat -A POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE; iptables -A FORWARD -i wg0 -j ACCEPT; iptables -A FORWARD -o wg0 -j ACCEPT
 PostDown = iptables -t nat -D POSTROUTING -s 10.77.0.0/24 -o ${WAN_IF} -j MASQUERADE; iptables -D FORWARD -i wg0 -j ACCEPT; iptables -D FORWARD -o wg0 -j ACCEPT
 EOF
-chmod 600 /etc/wireguard/wg0.conf
-printf 'net.ipv4.ip_forward=1\n' > /etc/sysctl.d/99-wireguard-forward.conf
-sysctl --system >/dev/null
+
+# Three independent client keys are generated on the VPS. Only the public keys
+# enter wg0.conf; each private config stays under /root/wireguard-clients/.
 for spec in "windows:2" "android:3" "iphone:4"; do
-  name="${spec%%:*}"; octet="${spec##*:}"
+  name="${spec%%:*}"
+  octet="${spec##*:}"
   priv="/etc/wireguard/clients/${name}.private"
   pub="/etc/wireguard/clients/${name}.public"
+
   [[ -s "$priv" ]] || wg genkey > "$priv"
   chmod 600 "$priv"
   wg pubkey < "$priv" > "$pub"
   chmod 600 "$pub"
+
   client_private="$(cat "$priv")"
   client_public="$(cat "$pub")"
-  grep -Fq "# ${name}" /etc/wireguard/wg0.conf || cat >> /etc/wireguard/wg0.conf <<EOF
+
+  cat >> "$CONFIG_TMP" <<EOF
 
 [Peer]
 # ${name}
 PublicKey = ${client_public}
 AllowedIPs = 10.77.0.${octet}/32
 EOF
-  cat > "/root/wireguard-clients/${name}.conf" <<EOF
+
+  client_tmp="$(mktemp "/root/wireguard-clients/${name}.conf.XXXXXX")"
+  chmod 600 "$client_tmp"
+  cat > "$client_tmp" <<EOF
 [Interface]
 PrivateKey = ${client_private}
 Address = 10.77.0.${octet}/32
@@ -51,16 +94,52 @@ DNS = 1.1.1.1
 
 [Peer]
 PublicKey = ${SERVER_PUBLIC}
-Endpoint = ${WG_ENDPOINT:-REPLACE_WITH_PUBLIC_SERVER_IP}:${PORT}
+Endpoint = ${WG_ENDPOINT}:${PORT}
 AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
+  mv -f "$client_tmp" "/root/wireguard-clients/${name}.conf"
   chmod 600 "/root/wireguard-clients/${name}.conf"
 done
-if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then ufw allow "${PORT}/udp" >/dev/null; fi
-systemctl enable wg-quick@wg0
-systemctl restart wg-quick@wg0
+
+chmod 600 "$CONFIG_TMP"
+BACKUP=""
+if [[ -f "$CONFIG" ]]; then
+  BACKUP="/etc/wireguard/wg0.conf.backup.$(date -u +%Y%m%dT%H%M%SZ)"
+  cp -p "$CONFIG" "$BACKUP"
+fi
+mv -f "$CONFIG_TMP" "$CONFIG"
+CONFIG_TMP=""
+
+printf 'net.ipv4.ip_forward=1\n' > /etc/sysctl.d/99-wireguard-forward.conf
+sysctl --system >/dev/null
+
+if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
+  ufw allow "${PORT}/udp" >/dev/null
+fi
+
+if ! systemctl enable wg-quick@wg0 >/dev/null || ! systemctl restart wg-quick@wg0; then
+  echo "WireGuard failed to start; attempting to restore the previous config." >&2
+  if [[ -n "$BACKUP" && -f "$BACKUP" ]]; then
+    cp -p "$BACKUP" "$CONFIG"
+    systemctl restart wg-quick@wg0 || true
+  else
+    systemctl stop wg-quick@wg0 || true
+    rm -f "$CONFIG"
+    systemctl disable wg-quick@wg0 >/dev/null 2>&1 || true
+  fi
+  fail "WireGuard did not start. Check systemctl status wg-quick@wg0 and journalctl -u wg-quick@wg0."
+fi
+
 wg show wg0 >/dev/null
-echo "WireGuard configured. Client profiles remain on the VPS under /root/wireguard-clients."
+grep -Fq "Endpoint = ${WG_ENDPOINT}:${PORT}" /root/wireguard-clients/windows.conf
+for name in windows android iphone; do
+  [[ -s "/root/wireguard-clients/${name}.conf" ]] || fail "Missing generated profile for ${name}."
+  [[ "$(stat -c '%a' "/root/wireguard-clients/${name}.conf")" == "600" ]] || fail "Unsafe permissions on ${name} profile."
+done
+
+echo "WireGuard configured and service is active."
+echo "Client profiles were generated on the VPS under /root/wireguard-clients (mode 600); they were not printed or uploaded."
 echo "Server public key: ${SERVER_PUBLIC}"
-echo "UDP port: ${PORT}"
+echo "Public endpoint: ${WG_ENDPOINT}:${PORT}/udp"
+echo "Note: this setup tunnels IPv4 only. IPv6 is not routed through the tunnel yet, so client devices must treat IPv6 leak prevention as unfinished."
