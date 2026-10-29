@@ -1,0 +1,111 @@
+name: Build FreeRoute Windows package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "windows/**"
+      - ".github/workflows/windows-client.yml"
+  pull_request:
+    paths:
+      - "windows/**"
+      - ".github/workflows/windows-client.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-x64:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish FreeRoute WinForms app
+        shell: pwsh
+        run: |
+          $publish = Join-Path $env:RUNNER_TEMP "freeroute-publish"
+          dotnet publish windows/FreeRoute.Windows.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true --output $publish
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
+
+      - name: Download and verify official WireGuard engine package
+        shell: pwsh
+        run: |
+          $msi = Join-Path $env:RUNNER_TEMP "wireguard-amd64-1.1.1.msi"
+          $url = "https://download.wireguard.com/windows-client/wireguard-amd64-1.1.1.msi"
+          Invoke-WebRequest -Uri $url -OutFile $msi
+          $signature = Get-AuthenticodeSignature -FilePath $msi
+          if ($signature.Status -ne "Valid") {
+            throw "WireGuard MSI signature is not valid: $($signature.Status)"
+          }
+          if (-not $signature.SignerCertificate.Subject.Contains("WireGuard")) {
+            throw "Unexpected publisher for WireGuard MSI: $($signature.SignerCertificate.Subject)"
+          }
+          Write-Host "Verified package publisher: $($signature.SignerCertificate.Subject)"
+
+      - name: Extract official engine into FreeRoute package
+        shell: pwsh
+        run: |
+          $msi = Join-Path $env:RUNNER_TEMP "wireguard-amd64-1.1.1.msi"
+          $extractRoot = Join-Path $env:RUNNER_TEMP "wireguard-admin"
+          $publish = Join-Path $env:RUNNER_TEMP "freeroute-publish"
+          New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null
+          $arguments = @("/a", ('"' + $msi + '"'), "/qn", "/norestart", ('TARGETDIR="' + $extractRoot + '"'))
+          $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "Administrative MSI extraction failed with exit code $($process.ExitCode)"
+          }
+
+          $engineExe = Get-ChildItem -Path $extractRoot -Filter "wireguard.exe" -File -Recurse |
+            Select-Object -First 1
+          if (-not $engineExe) { throw "wireguard.exe was not found in the verified MSI extraction" }
+
+          $engineDirectory = $engineExe.Directory.FullName
+          $destination = Join-Path $publish "wireguard"
+          New-Item -ItemType Directory -Force -Path $destination | Out-Null
+          Copy-Item -Path (Join-Path $engineDirectory "*") -Destination $destination -Recurse -Force
+
+          if (-not (Test-Path (Join-Path $destination "wireguard.exe"))) {
+            throw "WireGuard executable is missing from the final package"
+          }
+          Copy-Item -Path "windows/THIRD_PARTY_NOTICES.txt" -Destination (Join-Path $publish "THIRD_PARTY_NOTICES.txt") -Force
+          Write-Host "Packaged verified WireGuard engine from $engineDirectory"
+
+      - name: Run package layout checks
+        shell: pwsh
+        run: |
+          $publish = Join-Path $env:RUNNER_TEMP "freeroute-publish"
+          if (-not (Test-Path (Join-Path $publish "FreeRoute.Windows.exe"))) {
+            throw "FreeRoute Windows executable is missing"
+          }
+          if (-not (Test-Path (Join-Path $publish "wireguard/wireguard.exe"))) {
+            throw "Bundled WireGuard engine is missing"
+          }
+          if (-not (Test-Path (Join-Path $publish "THIRD_PARTY_NOTICES.txt"))) {
+            throw "Third-party license notices are missing"
+          }
+          Get-ChildItem -Path $publish -Recurse -File |
+            Measure-Object -Property Length -Sum |
+            ForEach-Object { Write-Host "Package files size: $($_.Sum) bytes" }
+
+      - name: Create package ZIP
+        shell: pwsh
+        run: |
+          $publish = Join-Path $env:RUNNER_TEMP "freeroute-publish"
+          $zip = Join-Path $env:RUNNER_TEMP "freeroute-windows-x64.zip"
+          Compress-Archive -Path (Join-Path $publish "*") -DestinationPath $zip -Force
+
+      - name: Upload FreeRoute Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: freeroute-windows-x64
+          path: ${{ runner.temp }}\freeroute-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
