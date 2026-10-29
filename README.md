@@ -90,7 +90,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 
 ## Security and testing limitations
 
-- The server firewall restricts IPv4 forwarding to public internet egress and blocks VPN-client access to private/reserved IPv4 ranges and host services. The setup still does not route IPv6; the client warning is not a complete leak-prevention mechanism.
+- Client profiles include IPv4 and IPv6 default routes. Until native IPv6 egress is implemented, the server explicitly blocks IPv6 forwarding and VPN-client access to server services. IPv6-only destinations therefore remain unavailable while connected. This is fail-closed server routing, not an OS-level kill switch; disconnect behavior and DNS/IP leak prevention still require real-device tests.
 - DNS behavior, server routing and kill-switch behavior still need end-to-end testing.
 - No country selector backed by real servers exists yet. Imported profile names are labels only.
 - Android sleep/resume and POCO battery restrictions have not been verified on the user's phone.
