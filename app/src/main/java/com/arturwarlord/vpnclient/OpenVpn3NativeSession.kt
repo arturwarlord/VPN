@@ -6,8 +6,9 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * Owns one native OpenVPN client callback object bound to a live VpnService.
  *
- * This is an internal JNI lifecycle primitive only. It does not evaluate a
- * profile, establish TUN, or start an OpenVPN connection.
+ * Profile evaluation is performed by the same native OpenVPNClient instance
+ * that will later own credentials and the connection lifecycle. This class
+ * still does not start a tunnel.
  */
 internal class OpenVpn3NativeSession(
     vpnService: OpenVpnVpnService
@@ -20,12 +21,21 @@ internal class OpenVpn3NativeSession(
         }
     }
 
+    @Synchronized
+    fun evaluateProfile(profileText: String): Boolean {
+        val handle = nativeHandle.get()
+        if (handle == 0L || profileText.isBlank()) return false
+        return nativeEvaluateProfile(handle, profileText)
+    }
+
+    @Synchronized
     override fun close() {
         val handle = nativeHandle.getAndSet(0L)
         if (handle != 0L) nativeDestroy(handle)
     }
 
     private external fun nativeCreate(vpnService: OpenVpnVpnService): Long
+    private external fun nativeEvaluateProfile(handle: Long, profileText: String): Boolean
     private external fun nativeDestroy(handle: Long)
 
     companion object {
