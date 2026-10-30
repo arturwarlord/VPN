@@ -2,6 +2,12 @@ name: Diagnose WireGuard server
 
 on:
   workflow_dispatch:
+    inputs:
+      ssh_port:
+        description: SSH port shown in the VPS provider panel
+        required: true
+        default: "22"
+        type: string
 
 permissions:
   contents: read
@@ -21,11 +27,16 @@ jobs:
           VPN_USER: ${{ secrets.VPN_USER }}
           VPN_SSH_KEY: ${{ secrets.VPN_SSH_KEY }}
           VPN_KNOWN_HOSTS: ${{ secrets.VPN_KNOWN_HOSTS }}
+          SSH_PORT: ${{ inputs.ssh_port }}
         shell: bash
         run: |
           set -euo pipefail
           [[ -n "$VPN_HOST" && -n "$VPN_USER" && -n "$VPN_SSH_KEY" && -n "$VPN_KNOWN_HOSTS" ]] || {
             echo "Add VPN_HOST, VPN_USER, VPN_SSH_KEY and VPN_KNOWN_HOSTS repository secrets first." >&2
+            exit 1
+          }
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]] && (( 10#$SSH_PORT >= 1 && 10#$SSH_PORT <= 65535 )) || {
+            echo "ssh_port must be an integer from 1 to 65535." >&2
             exit 1
           }
           printf '%s\n' "$VPN_SSH_KEY" > "$RUNNER_TEMP/vpn_key"
@@ -40,16 +51,23 @@ jobs:
         env:
           VPN_HOST: ${{ secrets.VPN_HOST }}
           VPN_USER: ${{ secrets.VPN_USER }}
+          SSH_PORT: ${{ inputs.ssh_port }}
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "$RUNNER_TEMP/vpn_key" \
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]] && (( 10#$SSH_PORT >= 1 && 10#$SSH_PORT <= 65535 ))
+          if [[ "$VPN_USER" == "root" ]]; then
+            remote_command="bash -s"
+          else
+            remote_command="sudo -n bash -s"
+          fi
+          ssh -p "$SSH_PORT" -i "$RUNNER_TEMP/vpn_key" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$RUNNER_TEMP/vpn_known_hosts" \
             -o GlobalKnownHostsFile=/dev/null \
             -o UpdateHostKeys=no \
-            "$VPN_USER@$VPN_HOST" "sudo -n bash -s" < scripts/diagnose-wireguard-server.sh
+            "$VPN_USER@$VPN_HOST" "$remote_command" < scripts/diagnose-wireguard-server.sh
 
       - name: Remove temporary SSH material
         if: always()
