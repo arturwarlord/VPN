@@ -5,7 +5,10 @@
 
 ## Decision summary
 
-No candidate below is approved as a dependable, unattended production exit server. The user tried switched.cloud but its panel reported **no VPS/container capacity available**, so it is not actionable right now. **Openworld is the next candidate to investigate**: its official FAQ documents public IPv6, NAT IPv4, root SSH and full systemd access inside containers. It remains conditional because private personal WireGuard use, inbound UDP and TUN/CAP_NET_ADMIN need confirmation and testing. Openworld also requires manual renewal every 24 hours. Do not pay or enable a paid tier. NeoHeberg is excluded because its free VPS is IPv6-only with no outbound IPv4 NAT; its dedicated IPv4 costs extra.
+No candidate below is approved as a dependable, unattended production exit server. switched.cloud has no free VPS/container capacity when the user attempted to provision it, so it is on hold. There are now two conditional leads:
+- **FOSSVPS (Frankfurt)** has the strongest published resources and no advertised daily keep-alive, but it is gated by strict LowEndTalk/LowEndSpirit reputation rules, our repository currently has no open-source license file, and inbound UDP/WireGuard permission still needs confirmation.
+- **Openworld** is the more accessible next technical prototype: root SSH, systemd containers, NAT IPv4 and public IPv6 are documented, but private personal WireGuard permission, UDP reachability and TUN/CAP_NET_ADMIN must be confirmed. It requires manual renewal once every 24 hours.
+TheUltraHost is another conditional option only for verified students; although the provider page explicitly mentions personal VPN over IPv6, the site's free-tier terms remain a non-binding draft and the site itself still says "Demo build". Do not pay, add a card, enable a paid tier or deploy without the relevant checks. NeoHeberg is excluded because its free VPS has no outbound IPv4 NAT.
 
 ## Candidates reviewed
 
@@ -60,17 +63,19 @@ The current official site advertises root SSH, KVM, a dedicated IPv4 and IPv6, b
 
 Official reference: https://alavps.com/ (FAQ and pricing sections)
 
-### TheUltraHost student VPS — attractive specs, but not approved yet
+### TheUltraHost student VPS — promising network design, but eligibility and legal terms block approval
 
-The current free-plan page advertises a KVM VPS with root access, 1 shared vCPU, 1 GB RAM, 15 GB NVMe, 250 GB/month, IPv6 /64 and 20 NAT IPv4 ports. It explicitly lists “a personal VPN over IPv6” as a suitable use, but excludes public proxies. Access is limited to verified students, with a manual Keep alive action every 30 days; otherwise the server pauses and is later deleted.
+At the latest check (30 October 2026), the provider page advertised **37 free slots remaining**. The plan is a KVM virtual machine with root access, 1 shared vCPU, 1 GB RAM, 15 GB NVMe and 250 GB/month. It provides an IPv6 /64 plus 20 forwarded NAT IPv4 ports. The provider explicitly lists “a personal VPN over IPv6” as a suitable use, while public proxies are prohibited. It requires student verification and one manual Keep alive click every 30 days; if missed, the VPS pauses after a 7-day reminder window and is deleted after another 14 days paused.
 
-Important trust and deployment caveats:
-- The published free-tier terms are labelled **“Draft for legal review · not yet binding”** and the site currently labels itself **“Demo build”** with placeholder prices. Treat the marketing page as an unverified offer, not a confirmed host contract.
-- Student eligibility is not assumed.
-- FreeRoute supports a public IPv6 literal as the outer WireGuard endpoint, but the server must still prove IPv4 egress/NAT for IPv4 websites and the selected client networks must be able to reach its IPv6 address.
-- The actual UDP forwarding/egress behavior, binding terms and geolocation must be verified before deployment.
+The official free-tier terms page is explicitly labelled **“Draft for legal review · not yet binding”** (effective 1 October 2026), and the provider site still labels itself **“Demo build”** with placeholder prices. Its current marketing claims should not be treated as final binding service terms.
 
-Do not create an account or send this provider server keys/client profiles until the eligibility and unfinished terms/site status have been resolved.
+Technical gates:
+- FreeRoute supports public IPv6 as the outer WireGuard endpoint, but the VPS must also prove outbound IPv4 egress/NAT for IPv4 internet destinations. The 20 forwarded IPv4 ports are useful for inbound reachability only if UDP forwarding is supported for the selected port.
+- The POCO's actual Wi-Fi/mobile networks must be able to reach IPv6.
+- Run the read-only FreeRoute preflight after provisioning; although KVM is more compatible than LXC, verify the actual WireGuard service, firewall, IPv4 route and egress.
+- Confirm the free plan's binding terms and acceptable-use policy before trusting the statement that personal VPN use is allowed.
+
+Do not create an account unless the user can honestly verify current student status. Do not upload student ID to this project or to ChatGPT. Do not add a payment card or select a paid upgrade.
 
 Official references:
 - Plan and requirements: https://theultrahost.com/free-vps
@@ -154,6 +159,28 @@ Network-wise this is materially better documented than most free-host leads: UDP
 Official references:
 - Network, Runtime, LXC/KVM and fair-use summary: https://switched.cloud/
 - Current Terms of Service and explicit personal VPN permission (version 2026-10-21): https://noprofit.space/terms
+
+### FOSSVPS — best published specs, but strict community and project eligibility
+
+FOSSVPS is a community-donated VPS project for developers of their own free/open-source software. Its current website lists:
+- 2 vCPU, 4 GiB RAM and 64 GiB disk;
+- Debian, Ubuntu or Alpine;
+- dual-stack NAT plus IPv6 (/128 or /96 depending on location);
+- a Frankfurt, Germany node (de11) currently listed as donated by ST-Hosting until 1 February 2028.
+
+The project's published rules say: free/open-source software developers only, white-hat use, non-commercial use, no SLA and no excessive CPU/disk/bandwidth consumption. It has direct node-to-VM port mappings for non-HTTP protocols (example: node port to the same VM port), but the public description does **not** explicitly confirm UDP forwarding or WireGuard. Get written confirmation from the administrator that a private WireGuard test tunnel on the Frankfurt node is acceptable and that the port mapping supports inbound UDP before applying or deploying.
+
+**Strict eligibility gate from the administrator's 27 May 2026 update:** applicants must be their own open-source software developers (merely using open-source software does not qualify), be active members of LowEndTalk (LET) or LowEndSpirit (LES), have a good non-spammy reputation, quality posts and thanks, and have held the forum membership for at least three months. New/empty forum accounts are explicitly not accepted. Registration via a VPN is blocked; disposable email addresses are blocked; registration from Russia, China and North Korea is blocked. Do not create duplicate accounts, fabricate forum activity, use a VPN to evade the registration block, or try to bypass eligibility.
+
+**Additional FreeRoute blocker:** this repository is public but currently has no LICENSE or COPYING file. A public GitHub repository without an explicit license cannot safely be presented as an open-source-licensed project. The FOSSVPS form asks for a Git/web project URL, forum and username, location, OS and a project description. The project would need the user to choose and add an open-source license to the repo before claiming an open-source license. Do not select a legal license or submit personal name/email/forum details on the user's behalf.
+
+If the user already meets the three-month LET/LES reputation requirement and is willing to choose an appropriate project license, this is worth asking the FOSSVPS administrator about. It is not yet an approved WireGuard host because the UDP/VPN-use policy is unconfirmed. The published Frankfurt node and resources are attractive, and the page does not list a daily/weekly renewal requirement, but there is no SLA and capacity is not guaranteed.
+
+Official/provider references:
+- FOSSVPS specifications and Frankfurt node: https://fossvps.org/
+- Current eligibility and port-forwarding discussion (LowEndTalk): https://lowendtalk.com/discussion/217664/welcome-to-fossvps-and-goodbye-to-nodeseek
+- Service and network details (LowEndTalk): https://lowendtalk.com/discussion/215848/fossvps-updates-free-server-for-open-source-developers-from-alexhost-hosteroid-and-st-hosting
+- Application form: https://fossvps.org/dev/form1.html
 
 ### Openworld — next conditional candidate for a one-device prototype
 
