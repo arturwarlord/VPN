@@ -33,6 +33,10 @@ android {
         jniLibs.srcDir(layout.buildDirectory.dir("generated/openvpn3/jniLibs"))
     }
 
+    sourceSets.getByName("main") {
+        java.srcDir(layout.buildDirectory.dir("generated/openvpn3/swig/java"))
+    }
+
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".debug"
