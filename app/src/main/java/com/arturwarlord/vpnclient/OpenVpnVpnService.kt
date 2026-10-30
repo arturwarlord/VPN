@@ -1,29 +1,137 @@
 package com.arturwarlord.vpnclient
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.VpnService
+import android.os.Build
+import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.util.Log
-import java.io.IOException
 
 /**
- * Android side of the OpenVPN 3 TUN-builder bridge.
+ * Android service boundary for OpenVPN 3.
  *
- * The native OpenVPN client owns the detached file descriptor returned by
- * establishTun(). This service deliberately does not start a session itself:
- * the native OpenVPNClient subclass and profile/credential pipeline must be
- * connected before the UI can expose an OpenVPN Connect action.
+ * The foreground lifecycle is deliberately separate from native session startup:
+ * this phase proves notification/service ownership only. It does not connect.
  */
 class OpenVpnVpnService : VpnService() {
     companion object {
         private const val TAG = "FreeRouteOpenVPN"
+        private const val CHANNEL_ID = "freeroute_openvpn"
+        private const val NOTIFICATION_ID = 3201
+
+        const val ACTION_START_FOREGROUND = "com.arturwarlord.vpnclient.OPENVPN_START_FOREGROUND"
+        const val ACTION_STOP = "com.arturwarlord.vpnclient.OPENVPN_STOP"
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = super.onBind(intent)
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_START_FOREGROUND -> startForegroundSession()
+            ACTION_STOP -> stopForegroundSession()
+            else -> {
+                Log.w(TAG, "Ignored unsupported service action")
+                stopSelf(startId)
+            }
+        }
+        return START_NOT_STICKY
+    }
+
+    private fun startForegroundSession() {
+        // Consent must be granted by the Activity before the service is started.
+        if (VpnService.prepare(this) != null) {
+            Log.w(TAG, "VPN consent is missing; refusing to start foreground session")
+            stopSelf()
+            return
+        }
+
+        createNotificationChannel()
+        val notification = buildNotification()
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (error: Exception) {
+            Log.e(TAG, "Unable to enter foreground state", error)
+            stopSelf()
+        }
+    }
+
+    private fun buildNotification(): Notification {
+        val openAppIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val stopIntent = PendingIntent.getService(
+            this,
+            1,
+            Intent(this, OpenVpnVpnService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return Notification.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setContentTitle("FreeRoute · OpenVPN")
+            .setContentText("Служба VPN активна; подключение ещё не запущено")
+            .setContentIntent(openAppIntent)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .addAction(
+                Notification.Action.Builder(
+                    android.R.drawable.ic_media_pause,
+                    "Остановить",
+                    stopIntent
+                ).build()
+            )
+            .build()
+    }
+
+    private fun createNotificationChannel() {
+        val manager = getSystemService(NotificationManager::class.java)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "FreeRoute OpenVPN",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Постоянное уведомление службы OpenVPN"
+            setShowBadge(false)
+        }
+        manager.createNotificationChannel(channel)
+    }
+
+    private fun stopForegroundSession() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    override fun onRevoke() {
+        stopForegroundSession()
+        super.onRevoke()
+    }
+
+    override fun onDestroy() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        super.onDestroy()
     }
 
     /**
      * Called by the native TunBuilder callback after OpenVPN has supplied the
      * complete interface configuration. Returns a detached fd, or -1.
-     *
-     * addresses/routes are paired with prefix lengths by index. Invalid or
-     * mismatched input is rejected rather than silently creating a partial VPN.
      */
     @Suppress("unused")
     fun establishTun(
