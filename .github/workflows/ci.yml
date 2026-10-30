@@ -105,6 +105,7 @@ jobs:
           test -s docs/IOS_CLIENT.md
           test -s docs/SERVER_DEPLOYMENT.md
           test -s docs/FREE_HOST_RESEARCH.md
+          test -s docs/UZBEKISTAN_HOST_RESEARCH.md
           test -s docs/CLIENT_SMOKE_TEST.md
           test -s .github/workflows/diagnose-server.yml
           test -s .github/workflows/preflight-host.yml
