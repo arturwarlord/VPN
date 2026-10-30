@@ -13,7 +13,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [x] 34 automated endpoint-validation cases for IPv4/IPv6 publicness, special-purpose addresses, canonical formatting and UDP ports.
 - [x] Manual GitHub Actions server-deployment workflow with verified SSH host-key pinning.
 - [x] Read-only server diagnostics that do not print private client profiles.
-- [x] Native Android client with local multi-profile management, connect/disconnect controls and an IPv6-route warning.
+- [x] Native Android client with local multi-profile management, connect/disconnect controls, an IPv6-route warning, and remote WireGuard-handshake status (the UI no longer treats a locally active interface as proof that the server answered).
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
 - [x] iOS SwiftUI app and Packet Tunnel extension compile successfully as an unsigned build in GitHub Actions.
