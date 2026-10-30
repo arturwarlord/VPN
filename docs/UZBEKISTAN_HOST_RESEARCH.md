@@ -89,7 +89,7 @@ However, clause 3.1.13 of its public offer explicitly prohibits using the hostin
 
 ### 4. MyCloud — one free day, then daily charges
 
-Official VPS page: https://mycloud.uz/en/vps-servers  
+Official VPS page: https://mycloud.uz/vps-servers  
 Account guide: https://mycloud.uz/
 
 The live VPS page lists a Start configuration at 4,000 UZS/day (1 vCPU, 1 GB RAM, 20 GB SSD, one IP) with Ubuntu/Debian, root access and Internet/TAS-IX/UZ-IX. Its current FAQ says the launch day is not billed and the first charge occurs at the nearest 00:00. The same page says the customer tops up a balance, charges are taken daily at 00:00, and a server automatically renews while funds remain. An indexed FAQ copy for the same URL says there is no free test for new customers, so the public descriptions are not fully consistent. Even taking the launch-day statement at face value, it is not a safe €0 offer unless MyCloud confirms that provisioning requires no paid balance/top-up and that the account cannot incur any charge. The page also says service is suspended at zero balance and VM data is deleted after 7 days.
@@ -137,9 +137,12 @@ Provider pages and contract sources reviewed:
 - UNICON VPS catalogue and 30-day promotion: https://cloud.unicon.uz/vps and https://pro.unicon.uz/
 - UNICON VPS regulation (open anonymous proxy restriction): https://api2.unicon.uz/media/serviceadditionalinfo/vps-uz-ru.pdf
 - ServerPlus VPS, WireGuard FAQ, network/firewall docs and new-user promo: https://serverplus.uz/en/products/cloud-vds-vps-servers
-- ServerPlus public offer: https://www-test.serverplus.uz/company/publick-offer
+- ServerPlus public offer: https://serverplus.uz/en/company/publick-offer
 - UzCloud VPS and public offer: https://uzcloud.uz/en/solutions/vps-vds and https://uzcloud.uz/en/oferta
-- MyCloud VPS and billing guide: https://mycloud.uz/en/vps-servers
+- MyCloud VPS and billing details: https://mycloud.uz/vps-servers
 - ACDN, Dicloud, UZSCINET, Airnet and HOSTIN: https://acdn.uz/ ; https://dicloud.uz/ ; https://uzscinet.uz/ ; https://airnet.uz/ ; https://hostin.uz/
+- SkyCloud VPS / free-trial FAQ: https://skycloud.uz/cloud/vps-vds/
+- SurkhanDC VPS location and offer: https://surkhandc.uz/ru
+- Uztelecom test-service tariffs: https://uztelecom.uz/ru/chastnym-licam/oblachnye-servisy/testovyy-servis/
 
 **Status:** research only. No provider account, VPS, payment, remote SSH connection or deployment has been created.
