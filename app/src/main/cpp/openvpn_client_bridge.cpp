@@ -1,5 +1,6 @@
 #include "openvpn_client_bridge.hpp"
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <openvpn/tun/builder/rgwflags.hpp>
@@ -225,6 +226,7 @@ bool FreeRouteOpenVpnClient::tun_builder_set_dns_options(
         const auto& server = entry.second;
         if (server.transport != openvpn::DnsServer::Transport::Unset &&
             server.transport != openvpn::DnsServer::Transport::Plain) return false;
+        if (server.dnssec != openvpn::DnsServer::Security::Unset) return false;
         if (!server.domains.empty() || !server.sni.empty()) return false;
         for (const auto& address : server.addresses) {
             if (address.port != 0 && address.port != 53) return false;
@@ -369,6 +371,9 @@ int FreeRouteOpenVpnClient::establishAndroidTun()
 int FreeRouteOpenVpnClient::tun_builder_establish()
 {
     if (!builderReady_ || addresses_.empty()) return -1;
+    const bool hasIpv6Address = std::any_of(addresses_.begin(), addresses_.end(),
+        [](const std::string& address) { return address.find(':') != std::string::npos; });
+    if (hasIpv6Address && mtu_ < 1280) return -1;
     const int fd = establishAndroidTun();
     if (fd >= 0) builderReady_ = false;
     return fd;
