@@ -411,6 +411,7 @@ class MainActivity : Activity() {
             if (resultCode == RESULT_OK) {
                 startPendingOpenVpnServiceTask()
             } else {
+                pendingOpenVpnProfilePath = null
                 Toast.makeText(this, "Разрешение VPN не предоставлено; служба не запущена.", Toast.LENGTH_LONG).show()
             }
         }
@@ -451,6 +452,7 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Сначала отключи WireGuard перед проверкой службы OpenVPN.", Toast.LENGTH_LONG).show()
             return
         }
+        pendingOpenVpnProfilePath = null
         pendingOpenVpnServiceStart = true
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
