@@ -21,6 +21,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/setup-wireguard.sh
           bash -n scripts/diagnose-wireguard-server.sh
+          bash -n scripts/preflight-wireguard-host.sh
           bash -n scripts/check-workflow-shell.sh
           bash -n tests/validate-endpoint.sh
           bash -n tests/validate-firewall-policy.sh
@@ -54,6 +55,11 @@ jobs:
           grep -q 'freeroute-managed' scripts/setup-wireguard.sh
           grep -q 'while iptables -C FORWARD -j FREEROUTE_FORWARD' scripts/setup-wireguard.sh
           test -s scripts/diagnose-wireguard-server.sh
+          test -s scripts/preflight-wireguard-host.sh
+          grep -q 'CAP_NET_ADMIN' scripts/preflight-wireguard-host.sh
+          grep -q '/dev/net/tun' scripts/preflight-wireguard-host.sh
+          grep -q 'Outbound IPv4 HTTPS connectivity verified' scripts/preflight-wireguard-host.sh
+          grep -q 'never installs packages' scripts/preflight-wireguard-host.sh
           grep -q 'FREEROUTE_FORWARD' scripts/diagnose-wireguard-server.sh
           grep -q 'exact approved rule set' scripts/diagnose-wireguard-server.sh
           grep -q 'host-access block' scripts/diagnose-wireguard-server.sh
@@ -101,6 +107,17 @@ jobs:
           test -s docs/FREE_HOST_RESEARCH.md
           test -s docs/CLIENT_SMOKE_TEST.md
           test -s .github/workflows/diagnose-server.yml
+          test -s .github/workflows/preflight-host.yml
+          grep -q 'preflight-wireguard-host.sh' .github/workflows/preflight-host.yml
+          grep -q 'inputs.ssh_port' .github/workflows/preflight-host.yml
+          grep -q 'inputs.ssh_port' .github/workflows/deploy.yml
+          grep -q 'inputs.ssh_port' .github/workflows/diagnose-server.yml
+          grep -q 'ssh -p "$SSH_PORT"' .github/workflows/preflight-host.yml
+          grep -q 'ssh -p "$SSH_PORT"' .github/workflows/deploy.yml
+          grep -q 'ssh -p "$SSH_PORT"' .github/workflows/diagnose-server.yml
+          grep -q 'VPN_USER" == "root"' .github/workflows/preflight-host.yml
+          grep -q 'VPN_USER" == "root"' .github/workflows/deploy.yml
+          grep -q 'VPN_USER" == "root"' .github/workflows/diagnose-server.yml
           grep -q 'group.com.arturwarlord.freeroute' ios/App/FreeRoute.entitlements
           grep -q 'group.com.arturwarlord.freeroute' ios/PacketTunnel/FreeRoutePacketTunnel.entitlements
           grep -q 'ProfileKeychain.load' ios/PacketTunnel/PacketTunnelProvider.swift

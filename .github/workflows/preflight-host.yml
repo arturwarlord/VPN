@@ -1,0 +1,81 @@
+name: Preflight WireGuard host
+
+on:
+  workflow_dispatch:
+    inputs:
+      ssh_port:
+        description: SSH port shown in the VPS provider panel
+        required: true
+        default: "22"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vpn-host-preflight
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Validate SSH settings and secrets
+        env:
+          VPN_HOST: ${{ secrets.VPN_HOST }}
+          VPN_USER: ${{ secrets.VPN_USER }}
+          VPN_SSH_KEY: ${{ secrets.VPN_SSH_KEY }}
+          VPN_KNOWN_HOSTS: ${{ secrets.VPN_KNOWN_HOSTS }}
+          SSH_PORT: ${{ inputs.ssh_port }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$VPN_HOST" && -n "$VPN_USER" && -n "$VPN_SSH_KEY" && -n "$VPN_KNOWN_HOSTS" ]] || {
+            echo "Add VPN_HOST, VPN_USER, VPN_SSH_KEY and VPN_KNOWN_HOSTS repository secrets first." >&2
+            exit 1
+          }
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]] || {
+            echo "ssh_port must be an integer from 1 to 65535." >&2
+            exit 1
+          }
+          (( 10#$SSH_PORT >= 1 && 10#$SSH_PORT <= 65535 )) || {
+            echo "ssh_port must be an integer from 1 to 65535." >&2
+            exit 1
+          }
+          printf '%s\n' "$VPN_SSH_KEY" > "$RUNNER_TEMP/vpn_key"
+          printf '%s\n' "$VPN_KNOWN_HOSTS" > "$RUNNER_TEMP/vpn_known_hosts"
+          chmod 600 "$RUNNER_TEMP/vpn_key" "$RUNNER_TEMP/vpn_known_hosts"
+          grep -qve '^[[:space:]]*$' "$RUNNER_TEMP/vpn_known_hosts" || {
+            echo "VPN_KNOWN_HOSTS does not contain a verified host-key entry." >&2
+            exit 1
+          }
+
+      - name: Run read-only capability checks over pinned SSH
+        env:
+          VPN_HOST: ${{ secrets.VPN_HOST }}
+          VPN_USER: ${{ secrets.VPN_USER }}
+          SSH_PORT: ${{ inputs.ssh_port }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$VPN_USER" == "root" ]]; then
+            remote_command="bash -s"
+          else
+            remote_command="sudo -n bash -s"
+          fi
+          ssh -p "$SSH_PORT" -i "$RUNNER_TEMP/vpn_key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/vpn_known_hosts" \
+            -o GlobalKnownHostsFile=/dev/null \
+            -o UpdateHostKeys=no \
+            "$VPN_USER@$VPN_HOST" "$remote_command" < scripts/preflight-wireguard-host.sh
+
+      - name: Remove temporary SSH material
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/vpn_key" "$RUNNER_TEMP/vpn_known_hosts"
