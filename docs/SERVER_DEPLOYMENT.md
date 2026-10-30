@@ -20,9 +20,11 @@ Only set these after the server is selected and its SSH host key is verified:
 | Secret | Purpose |
 | --- | --- |
 | `VPN_HOST` | Hostname or address used for SSH. |
-| `VPN_USER` | SSH account with `sudo -n` permission. |
+| `VPN_USER` | SSH account; use `root` for root login or a user with passwordless `sudo -n`. |
 | `VPN_SSH_KEY` | Private SSH key for that account. |
 | `VPN_KNOWN_HOSTS` | Known-hosts entry containing the verified server public host key. |
+
+The SSH port is a workflow input named `ssh_port` (default `22`), not a repository secret. For switched.cloud or another NAT host, enter the SSH port displayed in its panel. The deploy, diagnose and preflight workflows support both direct `root` SSH and a non-root account with passwordless `sudo -n`.
 
 Keep the private SSH key and client profile private. Do not commit them to this public repository or paste them into workflow logs.
 
@@ -30,14 +32,31 @@ Keep the private SSH key and client profile private. Do not commit them to this 
 
 The deploy workflow intentionally does not use `ssh-keyscan` to establish trust at connection time. A key fetched over the same potentially intercepted connection cannot prove the server's identity.
 
-Obtain the server's SSH host-key fingerprint or public host key from the provider's trusted console or other authenticated channel. Verify the fingerprint, then save a matching known_hosts line as the `VPN_KNOWN_HOSTS` secret. The hostname portion must match `VPN_HOST` as used by SSH. If the line doesn't match, the workflow should fail closed rather than ignore the mismatch.
+Obtain the server's SSH host-key fingerprint or public host key from the provider's trusted console or other authenticated channel. Verify the fingerprint, then save a matching known_hosts line as the `VPN_KNOWN_HOSTS` secret. The hostname portion must match `VPN_HOST` as used by SSH. For a non-default SSH port, the entry normally uses the form `[host]:port`. If the line doesn't match, the workflow should fail closed rather than ignore the mismatch.
+
+## Preflight the host before deployment
+
+After creating a disposable free VPS/container and adding the four SSH secrets, run **Actions → Preflight WireGuard host → Run workflow** first. Enter the SSH port shown by the provider.
+
+This check is read-only: it does not install packages, change sysctls, edit firewall rules, or create network interfaces. It checks:
+- root or passwordless sudo access and Ubuntu/Debian;
+- systemd as PID 1 and the presence of the required base commands;
+- /dev/net/tun and the effective CAP_NET_ADMIN capability;
+- visibility of a WireGuard-capable kernel;
+- access to iptables filter/NAT and ip6tables;
+- whether IPv4 forwarding can be enabled;
+- an IPv4 default route and outbound IPv4 HTTPS connectivity.
+
+The outbound IPv4 test requests `https://api.ipify.org`. The public IP value is not printed or stored, but the service necessarily sees the request's source IP. Passing this check does **not** prove that inbound UDP is externally reachable or that WireGuard will start correctly.
+
+This step is especially important for LXC containers: root inside a container does not necessarily have permission to create TUN devices or manage firewall/NAT rules. If the preflight fails on TUN, CAP_NET_ADMIN, WireGuard kernel visibility, systemd or iptables, **do not run the deploy workflow on that container**. A KVM VM may provide the required isolation but switched.cloud requires its Plus feature, which can only be acquired with earned Cloud Tokens; do not purchase anything.
 
 ## Deploy
 
-After the free server and its network firewall are confirmed:
+Only after the preflight passes and external UDP forwarding has been confirmed:
 1. Open **Actions → Deploy WireGuard VPN → Run workflow**.
-2. Enter the server's public IPv4 or IPv6 address as `endpoint_ip` and the allowed UDP port.
-3. Review the run. It first verifies the pinned SSH host key and non-interactive sudo before sending the installer.
+2. Enter the external public IPv4 or IPv6 address as `endpoint_ip`, the forwarded/listening UDP port, and the provider's SSH port.
+3. Review the run. It checks endpoint country, pins the SSH host key, and verifies root or non-interactive sudo before sending the installer.
 
 Before SSH deployment, the workflow queries the free HTTPS geolocation endpoint `ipwho.is` for the provided public endpoint and refuses deployment if the reported country is Russia or the API cannot return a valid matching IP/country. This is a best-effort database lookup, not cryptographic proof of the server's location. Cross-check the provider's region and verify the actual exit IP from a connected client. This lookup sends the already-public endpoint IP to that third-party API; see [its documentation](https://ipwhois.io/ru/documentation).
 
