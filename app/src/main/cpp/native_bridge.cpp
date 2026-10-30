@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 
-#include "ovpncli.hpp"
 #include "openvpn_client_bridge.hpp"
 
 namespace {
