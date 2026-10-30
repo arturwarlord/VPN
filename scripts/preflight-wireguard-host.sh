@@ -21,9 +21,9 @@ fi
 if [[ -r /etc/os-release ]]; then
   # shellcheck disable=SC1091
   . /etc/os-release
-  case "\${ID:-}" in
-    ubuntu|debian) pass "Supported Linux distribution: \${PRETTY_NAME:-$ID}" ;;
-    *) fail "Unsupported distribution '\${ID:-unknown}'; installer supports Ubuntu/Debian" ;;
+  case "${ID:-}" in
+    ubuntu|debian) pass "Supported Linux distribution: ${PRETTY_NAME:-$ID}" ;;
+    *) fail "Unsupported distribution '${ID:-unknown}'; installer supports Ubuntu/Debian" ;;
   esac
 else
   fail "/etc/os-release is unavailable"
@@ -36,11 +36,19 @@ else
   fail "systemd is not PID 1; current server installer needs systemd/wg-quick service management"
 fi
 
-for tool in apt-get python3 ip sysctl iptables ip6tables; do
+for tool in apt-get python3 ip sysctl; do
   if command -v "$tool" >/dev/null 2>&1; then
     pass "Required command available: $tool"
   else
     fail "Required command missing: $tool"
+  fi
+done
+
+for tool in iptables ip6tables; do
+  if command -v "$tool" >/dev/null 2>&1; then
+    pass "Firewall command available: $tool"
+  else
+    warn "Firewall command $tool is not installed yet; APT installation and container firewall permissions must be verified before deployment"
   fi
 done
 
