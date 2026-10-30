@@ -38,6 +38,7 @@ class MainActivity : Activity() {
     private var isConnected = false
     private var isBusy = false
     private var isCheckingExit = false
+    private var isOpenVpnCoreCheckRunning = false
     private var connectionStartedAtEpochMillis = 0L
     private var hasHandshakeForCurrentSession = false
     private var isHandshakeCheckRunning = false
@@ -57,6 +58,7 @@ class MainActivity : Activity() {
     private lateinit var connectButton: Button
     private lateinit var disconnectButton: Button
     private lateinit var checkCountryButton: Button
+    private lateinit var openVpnCoreButton: Button
 
     private data class SavedProfile(
         val fileName: String,
@@ -180,6 +182,10 @@ class MainActivity : Activity() {
         checkCountryButton = makeButton("Проверить страну выхода", Color.rgb(52, 83, 133))
         checkCountryButton.setOnClickListener { checkExitCountry() }
         root.addView(checkCountryButton, buttonLayout())
+
+        openVpnCoreButton = makeButton("Диагностика OpenVPN Core", Color.rgb(70, 85, 120))
+        openVpnCoreButton.setOnClickListener { diagnoseOpenVpnCore() }
+        root.addView(openVpnCoreButton, buttonLayout())
 
         val licensesButton = makeButton("О лицензиях", Color.rgb(36, 48, 71))
         licensesButton.setOnClickListener { showLicenses() }
@@ -522,6 +528,32 @@ class MainActivity : Activity() {
         }.start()
     }
 
+    private fun diagnoseOpenVpnCore() {
+        if (isOpenVpnCoreCheckRunning) return
+
+        isOpenVpnCoreCheckRunning = true
+        openVpnCoreButton.isEnabled = false
+        Thread {
+            val result = try {
+                val platform = OpenVpn3Core.nativePlatform()
+                "Нативное ядро OpenVPN 3 загружено.\\nПлатформа: $platform\\n\\nЭто проверка сборки и вызова ClientAPI. Подключение OpenVPN, TUN-интерфейс, маршруты и DNS пока не реализованы."
+            } catch (error: Throwable) {
+                "Не удалось загрузить OpenVPN 3 Core.\\n\\nПричина: ${error.message ?: error.javaClass.simpleName}"
+            }
+
+            runOnUiThread {
+                isOpenVpnCoreCheckRunning = false
+                openVpnCoreButton.isEnabled = true
+                val loaded = result.startsWith("Нативное ядро OpenVPN 3 загружено")
+                AlertDialog.Builder(this)
+                    .setTitle(if (loaded) "OpenVPN Core готов к следующему этапу" else "Ошибка OpenVPN Core")
+                    .setMessage(result)
+                    .setPositiveButton("Закрыть", null)
+                    .show()
+            }
+        }.start()
+    }
+
     private fun disconnect() {
         val tunnelBackend = backend
         if (tunnelBackend == null || !isConnected || isBusy) {
@@ -556,6 +588,7 @@ class MainActivity : Activity() {
         connectButton.isEnabled = profile != null && canEdit
         disconnectButton.isEnabled = isConnected && !isBusy
         checkCountryButton.isEnabled = isConnected && hasHandshakeForCurrentSession && !isBusy && !isCheckingExit
+        openVpnCoreButton.isEnabled = !isOpenVpnCoreCheckRunning
     }
 
     private fun showLicenses() {

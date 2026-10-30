@@ -13,6 +13,10 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        // Experimental OpenVPN 3 phase one is built for the ARM64 POCO device.
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     compileOptions {
@@ -23,6 +27,10 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    sourceSets.getByName("main") {
+        jniLibs.srcDir(layout.buildDirectory.dir("generated/openvpn3/jniLibs"))
     }
 
     buildTypes {

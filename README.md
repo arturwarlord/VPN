@@ -20,6 +20,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [x] CI checks Bash syntax in workflow steps, checks that private key material is not committed, runs 34 endpoint-validation cases, verifies IPv4 firewall-hook rule ordering, checks deployment safety, and validates the IPv6 fail-closed profile/server policy.
 - [x] iOS tunnel configuration is stored in a shared Keychain group; VPN preferences retain only a Keychain reference. The app avoids overwriting unrelated VPN profiles.
 - [x] Android, Windows and iPhone clients include an opt-in check of the current public IP and estimated exit country. The check sends the current IP to `ipwho.is` only after the user presses the button; it does not save the result.
+- [ ] Android OpenVPN 3 Core phase 1: package and load the native ARM64 client core; the TUN/connection bridge remains the next step.
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
 - [ ] Sign and install the iOS app with an Apple developer team that has the required Network Extension entitlement.
 - [ ] Find a sustainable, genuinely free VPN exit node outside Russia.
@@ -113,6 +114,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `docs/UZBEKISTAN_HOST_RESEARCH.md` — Uzbekistan VPS providers, free trials, promo credits and WireGuard policy checks.
 - `docs/PUBLIC_UZBEK_PROXY_VPN_LISTS.md` — review of public Uzbekistan proxy/VPN lists, endpoint reliability, protocol compatibility and security.
 - `docs/OPENVPN_TRANSPORT_RESEARCH.md` — live OpenVPN availability outside Russia, Uzbek endpoint verification and cross-platform integration/licensing feasibility.
+- `docs/ANDROID_OPENVPN3_PHASE1.md` — Android ARM64 OpenVPN 3 Core build, component-only MPL 2.0 scope and native diagnostic status.
 - `scripts/check_public_vpn_sources.py` and `.github/workflows/monitor-public-vpn-sources.yml` — daily read-only checks for newly available public Uzbekistan VPN listings.
 - `docs/UZBEKISTAN_PROVIDER_SUPPORT_QUESTIONS.md` — copy-ready Russian/English questions for UNICON and ServerPlus support.
 - `docs/CLIENT_SMOKE_TEST.md` — safe temporary third-party WireGuard profile test before our own server exists.

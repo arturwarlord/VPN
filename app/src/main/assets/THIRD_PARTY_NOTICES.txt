@@ -3,6 +3,17 @@ FreeRoute VPN — third-party software notices
 
 FreeRoute VPN uses the embeddable WireGuard Tunnel Library.
 
+FreeRoute also builds the upstream OpenVPN 3 Core as a separate experimental component.
+
+Component: OpenVPN 3 Core (C++ client library)
+Upstream project: https://github.com/OpenVPN/openvpn3
+Pinned source commit: 0abc8313b8fe5f63dbebc10d53094952957845d9
+Upstream license options: AGPL-3.0-only or MPL 2.0
+License selected by FreeRoute for this component: Mozilla Public License, Version 2.0
+Full license text: OpenVPN3-MPL-2.0.txt (included in the APK assets)
+The native library is built from the pinned upstream source during GitHub Actions. The MPL selection applies to OpenVPN 3 Core and any covered modifications to that component only. It does not change the license of the FreeRoute application or the WireGuard component.
+
+
 Component: WireGuard Tunnel Library for Android
 Maven coordinate: com.wireguard.android:tunnel:1.0.20260102
 Copyright: Copyright © 2017-2025 WireGuard LLC. All Rights Reserved.
