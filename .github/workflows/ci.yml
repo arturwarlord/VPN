@@ -96,6 +96,11 @@ jobs:
           grep -q 'ACTION_STOP' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           grep -q 'Build.VERSION.SDK_INT >= 34' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           grep -q 'requestOpenVpnServiceSmokeTest' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'pickOpenVpnProfileRequest' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'OpenVpnProfileStore(this).import' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'MAX_PROFILE_BYTES = 256 \* 1024' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnProfileStore.kt
+          grep -q 'CodingErrorAction.REPORT' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnProfileStore.kt
+          test -s docs/ANDROID_OPENVPN_PROFILE_IMPORT_PHASE7.md
           grep -q 'POST_NOTIFICATIONS' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           grep -q 'startForegroundService(intent)' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
