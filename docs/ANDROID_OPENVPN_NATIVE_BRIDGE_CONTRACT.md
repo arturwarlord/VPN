@@ -108,3 +108,45 @@ explicitly or reject the configuration with a clear error.
 The Android TUN service and SWIG diagnostic binding exist on earlier branches. There is
 not yet a concrete native `OpenVPNClient` subclass, JNI lifecycle bridge, working
 OpenVPN connection, or end-to-end server test. WireGuard remains the working VPN path.
+
+
+## Exact callback signature details (verified against pinned headers)
+
+The implementation must use the exact signatures from
+`openvpn/tun/builder/base.hpp`, not simplified parameter lists:
+
+- `tun_builder_add_address(address, prefix_length, gateway, ipv6, net30)`
+  — the optional gateway and `net30` topology flag must be evaluated, not discarded.
+- `tun_builder_reroute_gw(ipv4, ipv6, flags)`
+  — preserve and interpret redirect-gateway flags; do not reduce this to unconditional
+  default routes.
+- `tun_builder_add_route(address, prefix_length, metric, ipv6)`
+  and `tun_builder_exclude_route(address, prefix_length, metric, ipv6)`
+  — preserve family and metric, and reject unsupported exclusion semantics.
+- `tun_builder_set_dns_options(const DnsOptions&)`
+  — this is the OpenVPN 3 DNS-options structure from
+  `openvpn/client/dns_options.hpp`, not a plain string list. The Android bridge must
+  inspect each server's transport and associated domains/search policy before deciding
+  whether it can represent the configuration.
+- `tun_builder_set_allow_family(af, allow)` and
+  `tun_builder_set_allow_local_dns(allow)`
+  — both affect leak prevention and must be implemented or cause a fail-closed result.
+- `tun_builder_add_wins_server(address)`,
+  `tun_builder_add_proxy_bypass(host)`,
+  `tun_builder_set_proxy_auto_config_url(url)`,
+  `tun_builder_set_proxy_http(host, port)`, and
+  `tun_builder_set_proxy_https(host, port)`
+  — these are distinct callbacks. Android support cannot be assumed; unsupported
+  profile/server-pushed settings must be rejected explicitly.
+
+The Android service's current `establishTun(...)` signature does not yet carry the
+gateway/net30 metadata, redirect-gateway flags, route metrics, address-family policy,
+local-DNS policy, DNS transport/domain metadata, WINS, or proxy settings. Therefore it
+is not yet a complete implementation target. The native bridge must either extend the
+service contract to represent supported settings or fail closed before calling
+`VpnService.Builder.establish()`. It must never silently drop any of these settings.
+
+The `OpenVPNClient` API also distinguishes `eval_config(const Config&)` on the client
+from `OpenVPNClientHelper::eval_config(const Config&)` on the helper. The native
+session object should use the client instance's method so the evaluated state belongs
+to the same client that will later receive credentials and execute `connect()`.
