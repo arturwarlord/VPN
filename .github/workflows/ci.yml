@@ -90,6 +90,14 @@ jobs:
           test -s app/src/main/cpp/CMakeLists.txt
           test -s app/src/main/cpp/native_bridge.cpp
           test -s app/src/main/assets/OpenVPN3-MPL-2.0.txt
+          test -s app/src/main/assets/ASIO-BOOST-1.0.txt
+          test -s app/src/main/assets/FMT-MIT.txt
+          test -s app/src/main/assets/LZ4-BSD-2-Clause.txt
+          test -s app/src/main/assets/OpenSSL-Apache-2.0.txt
+          test -s third_party/licenses/asio-boost-1.0.txt
+          test -s third_party/licenses/fmt-mit.txt
+          test -s third_party/licenses/lz4-bsd-2-clause.txt
+          test -s third_party/licenses/openssl-apache-2.0.txt
           test -s third_party/licenses/OpenVPN3-MPL-2.0.txt
           test -s scripts/build-android-openvpn3.sh
           test -s docs/ANDROID_OPENVPN3_PHASE1.md
