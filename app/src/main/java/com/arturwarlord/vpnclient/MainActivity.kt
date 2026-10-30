@@ -330,7 +330,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun displayNameFor(uri: android.net.Uri): String {
+    private fun displayNameFor(uri: android.net.Uri, fallbackExtension: String = "conf"): String {
         val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
         contentResolver.query(uri, projection, null, null, null)?.use { cursor: Cursor ->
             val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
@@ -338,7 +338,7 @@ class MainActivity : Activity() {
                 cursor.getString(column)?.let { return it }
             }
         }
-        return "profile-${System.currentTimeMillis()}.conf"
+        return "profile-${System.currentTimeMillis()}.$fallbackExtension"
     }
 
     private fun uniqueProfileFile(displayName: String): File {
@@ -368,7 +368,7 @@ class MainActivity : Activity() {
                 val imported = OpenVpnProfileStore(this).import(
                     contentResolver.openInputStream(uri)
                         ?: throw IllegalArgumentException("Не удалось открыть выбранный файл."),
-                    displayNameFor(uri)
+                    displayNameFor(uri, "ovpn")
                 )
                 refreshOpenVpnProfileStatus()
                 Toast.makeText(
