@@ -41,12 +41,12 @@ def fetch_text(url: str, timeout: int = 20) -> str:
 
 
 def plain_text(value: str) -> str:
-    return re.sub(r"\\s+", " ", html.unescape(re.sub(r"<[^>]*>", " ", value)))
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]*>", " ", value)))
 
 
 def parse_huntvpn_uz(page: str) -> dict:
     text = plain_text(page)
-    match = re.search(r"(\\d+)\\s+alive\\s+of\\s+(\\d+)\\s+tracked here", text, re.I)
+    match = re.search(r"(\d+)\s+alive\s+of\s+(\d+)\s+tracked here", text, re.I)
     if not match:
         raise ValueError("Could not find the live 'alive of tracked' count")
     alive, tracked = map(int, match.groups())
@@ -83,7 +83,7 @@ def parse_vpngate_api(data: str) -> dict:
 
 def parse_publicvpnlist_countries(page: str) -> dict:
     text = plain_text(page)
-    found = bool(re.search(r"\\bUzbekistan\\b", text, re.I))
+    found = bool(re.search(r"\bUzbekistan\b", text, re.I))
     return {
         "status": "candidate" if found else "none",
         "country_present": found,
@@ -93,9 +93,9 @@ def parse_publicvpnlist_countries(page: str) -> dict:
 
 def parse_unverified_directory(page: str, source_key: str) -> dict:
     text = plain_text(page)
-    hosts = sorted(set(re.findall(r"vpn[0-9]+\\.opengw\\.net", text, re.I)))
+    hosts = sorted(set(re.findall(r"vpn[0-9]+\.opengw\.net", text, re.I)))
     if source_key == "proxyfreeonly_uz":
-        match = re.search(r"(?:ВПН онлайн|VPN online)\\s*(\\d+)", text, re.I)
+        match = re.search(r"(?:ВПН онлайн|VPN online)\s*(\d+)", text, re.I)
         listed_count = int(match.group(1)) if match else None
     else:
         listed_count = len(hosts)
@@ -176,7 +176,7 @@ def render_summary(report: dict) -> str:
         "",
         "This check does not download profiles, probe VPN endpoints, or route traffic through third parties.",
     ]
-    return "\\n".join(rows) + "\\n"
+    return "\n".join(rows) + "\n"
 
 
 def main() -> int:
@@ -185,7 +185,7 @@ def main() -> int:
     args = parser.parse_args()
 
     report = build_report()
-    encoded = json.dumps(report, ensure_ascii=False, indent=2) + "\\n"
+    encoded = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     with open(args.output, "w", encoding="utf-8") as handle:
         handle.write(encoded)
 
@@ -201,7 +201,7 @@ def main() -> int:
             handle.write(
                 "candidate_detected="
                 + ("true" if report["potential_uz_openvpn_candidate"] else "false")
-                + "\\n"
+                + "\n"
             )
 
     print(summary)
