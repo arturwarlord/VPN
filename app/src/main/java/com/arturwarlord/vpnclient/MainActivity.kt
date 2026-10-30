@@ -9,6 +9,8 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.VpnService
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.OpenableColumns
 import android.view.Gravity
 import android.widget.ArrayAdapter
@@ -36,6 +38,15 @@ class MainActivity : Activity() {
     private var isConnected = false
     private var isBusy = false
     private var isCheckingExit = false
+    private var connectionStartedAtEpochMillis = 0L
+    private var hasHandshakeForCurrentSession = false
+    private var isHandshakeCheckRunning = false
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val handshakePollIntervalMs = 2_000L
+    private val handshakeWarningAfterMs = 20_000L
+    private val handshakePollRunnable = object : Runnable {
+        override fun run() = checkWireGuardHandshake()
+    }
     private var selectedProfileFileName: String? = null
     private val savedProfiles = mutableListOf<SavedProfile>()
 
@@ -60,7 +71,18 @@ class MainActivity : Activity() {
             runOnUiThread {
                 isConnected = newState == Tunnel.State.UP
                 isBusy = false
-                renderState(if (isConnected) "VPN подключён" else "VPN отключён")
+                if (isConnected) {
+                    if (connectionStartedAtEpochMillis == 0L) {
+                        connectionStartedAtEpochMillis = System.currentTimeMillis()
+                    }
+                    renderState("Туннель включён · ждём ответа сервера")
+                    scheduleHandshakeCheck()
+                } else {
+                    mainHandler.removeCallbacks(handshakePollRunnable)
+                    connectionStartedAtEpochMillis = 0L
+                    hasHandshakeForCurrentSession = false
+                    renderState("VPN отключён")
+                }
             }
         }
     }
@@ -310,6 +332,64 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun scheduleHandshakeCheck(delayMs: Long = 1_000L) {
+        mainHandler.removeCallbacks(handshakePollRunnable)
+        mainHandler.postDelayed(handshakePollRunnable, delayMs)
+    }
+
+    /**
+     * An UP interface only proves that the local WireGuard engine started.
+     * A recent handshake with one of the configured peers proves that the
+     * remote WireGuard endpoint answered this session.
+     */
+    private fun checkWireGuardHandshake() {
+        if (!isConnected || isBusy || hasHandshakeForCurrentSession) return
+
+        val tunnelBackend = backend ?: return
+        val activeConfig = profile ?: return
+        val startedAt = connectionStartedAtEpochMillis
+        if (startedAt <= 0L) return
+
+        if (isHandshakeCheckRunning) {
+            scheduleHandshakeCheck(handshakePollIntervalMs)
+            return
+        }
+
+        isHandshakeCheckRunning = true
+        Thread {
+            val handshakeReceived = try {
+                val statistics = tunnelBackend.getStatistics(tunnel)
+                activeConfig.peers.any { peer ->
+                    val peerStats = statistics.peer(peer.publicKey)
+                    peerStats != null &&
+                        peerStats.latestHandshakeEpochMillis() >= startedAt
+                }
+            } catch (_: Exception) {
+                false
+            }
+
+            runOnUiThread {
+                isHandshakeCheckRunning = false
+                if (!isConnected || connectionStartedAtEpochMillis != startedAt) return@runOnUiThread
+
+                if (handshakeReceived) {
+                    hasHandshakeForCurrentSession = true
+                    renderState("VPN подключён · сервер ответил")
+                } else {
+                    val elapsed = System.currentTimeMillis() - startedAt
+                    renderState(
+                        if (elapsed >= handshakeWarningAfterMs) {
+                            "Туннель включён · сервер не ответил"
+                        } else {
+                            "Подключаемся · ждём ответа сервера"
+                        }
+                    )
+                    scheduleHandshakeCheck(handshakePollIntervalMs)
+                }
+            }
+        }.start()
+    }
+
     private fun requestConnection() {
         if (profile == null) {
             Toast.makeText(this, "Сначала добавь профиль сервера", Toast.LENGTH_LONG).show()
@@ -348,18 +428,28 @@ class MainActivity : Activity() {
         val tunnelBackend = backend ?: GoBackend(applicationContext).also { backend = it }
         isBusy = true
         renderState("Подключаемся…")
+        connectionStartedAtEpochMillis = System.currentTimeMillis()
+        hasHandshakeForCurrentSession = false
         Thread {
             try {
-                tunnelBackend.setState(tunnel, Tunnel.State.UP, config)
+                val resultingState = tunnelBackend.setState(tunnel, Tunnel.State.UP, config)
                 runOnUiThread {
-                    isConnected = true
+                    isConnected = resultingState == Tunnel.State.UP
                     isBusy = false
-                    renderState("VPN подключён")
+                    if (isConnected) {
+                        renderState("Туннель включён · ждём ответа сервера")
+                        scheduleHandshakeCheck()
+                    } else {
+                        renderState("VPN не запущен")
+                    }
                 }
             } catch (_: Exception) {
+                mainHandler.removeCallbacks(handshakePollRunnable)
                 runOnUiThread {
                     isConnected = false
                     isBusy = false
+                    connectionStartedAtEpochMillis = 0L
+                    hasHandshakeForCurrentSession = false
                     renderState("Не удалось подключиться")
                     Toast.makeText(this, "Ошибка VPN. Проверь профиль и доступность сервера.", Toast.LENGTH_LONG).show()
                 }
@@ -368,8 +458,13 @@ class MainActivity : Activity() {
     }
 
     private fun checkExitCountry() {
-        if (!isConnected || isBusy || isCheckingExit) {
-            Toast.makeText(this, "Сначала подключи VPN", Toast.LENGTH_SHORT).show()
+        if (!isConnected || !hasHandshakeForCurrentSession || isBusy || isCheckingExit) {
+            val message = if (isConnected && !hasHandshakeForCurrentSession) {
+                "Удалённый сервер ещё не ответил: WireGuard handshake не подтверждён."
+            } else {
+                "Сначала подключи VPN"
+            }
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             return
         }
 
@@ -460,7 +555,7 @@ class MainActivity : Activity() {
         profileSpinner.isEnabled = canEdit && savedProfiles.isNotEmpty()
         connectButton.isEnabled = profile != null && canEdit
         disconnectButton.isEnabled = isConnected && !isBusy
-        checkCountryButton.isEnabled = isConnected && !isBusy && !isCheckingExit
+        checkCountryButton.isEnabled = isConnected && hasHandshakeForCurrentSession && !isBusy && !isCheckingExit
     }
 
     private fun showLicenses() {
