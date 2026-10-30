@@ -59,7 +59,7 @@ jobs:
           grep -q 'CAP_NET_ADMIN' scripts/preflight-wireguard-host.sh
           grep -q '/dev/net/tun' scripts/preflight-wireguard-host.sh
           grep -q 'Outbound IPv4 HTTPS connectivity verified' scripts/preflight-wireguard-host.sh
-          grep -q 'no packages' scripts/preflight-wireguard-host.sh
+          grep -q 'never installs packages' scripts/preflight-wireguard-host.sh
           grep -q 'FREEROUTE_FORWARD' scripts/diagnose-wireguard-server.sh
           grep -q 'exact approved rule set' scripts/diagnose-wireguard-server.sh
           grep -q 'host-access block' scripts/diagnose-wireguard-server.sh
