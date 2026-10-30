@@ -73,7 +73,7 @@ Contacts:
 3. Есть ли исходящий IPv4-доступ в Интернет и полный root-доступ для установки WireGuard?
 4. Какой минимальный VPS можно оплатить бонусами 100 000 сум и какова его фактическая стоимость в сутки/месяц с публичным IP?
 5. Когда истекает бонусный баланс? Есть ли минимальный срок использования или обязательное пополнение?
-6. Что происходит при нулевом балансе: сервер выключается, удаляется или автоматически возникает задолженность/платный счёт?
+6. В оферте указано, что при нулевом балансе услуги автоматически приостанавливаются, данные ВМ хранятся не более 30 дней, после чего могут быть удалены. Применяется ли это без исключений и к бонусным 100 000 сум: без долга, счёта, списания с карты или автоматического перехода на платный тариф?
 7. Нужна ли банковская карта или пополнение собственными средствами для получения/использования бонуса?
 8. Какие именно данные и документы нужны для подтверждения личности, и можно ли получить условия обработки персональных данных до прохождения проверки?
 
@@ -94,7 +94,7 @@ Could you please confirm:
 3. Is outbound IPv4 Internet access available, and is full root access provided?
 4. What is the smallest VPS configuration that can be paid for with the 100,000 UZS bonus, including the actual daily/monthly price with a public IP?
 5. When does the bonus expire? Is there a minimum usage period or mandatory top-up?
-6. What happens when the balance reaches zero: is the VPS stopped/deleted, or can a paid debt/automatic charge occur?
+6. Your public offer says services are suspended at zero balance and VM data is retained for up to 30 days before deletion. Does this apply in the same way when the balance is promotional credit, with no debt, invoice, card charge or automatic paid conversion?
 7. Is a bank card or personal top-up required to obtain or use the bonus?
 8. What personal data/documents are required for identity verification, and can I review the personal-data processing terms before submitting them?
 
