@@ -47,6 +47,27 @@ internal class OpenVpnProfileStore(context: Context) {
         return destination
     }
 
+    fun readText(file: File): String {
+        val root = directory.canonicalFile
+        val candidate = file.canonicalFile
+        require(candidate.parentFile == root && candidate.isFile &&
+            candidate.extension.equals("ovpn", ignoreCase = true)
+        ) { "Выбранный профиль не найден в закрытом хранилище приложения." }
+        val bytes = candidate.inputStream().use { readBounded(it) }
+        require(bytes.isNotEmpty() && bytes.none { it == 0.toByte() }) {
+            "Профиль пустой или содержит бинарные данные."
+        }
+        return try {
+            Charsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(bytes))
+                .toString()
+        } catch (_: Exception) {
+            throw IllegalArgumentException("Профиль должен быть текстовым файлом UTF-8.")
+        }
+    }
+
     private fun readBounded(input: InputStream): ByteArray {
         input.use { source ->
             val output = ByteArrayOutputStream()
