@@ -6,12 +6,14 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - "scripts/build-android-openvpn3.sh"
       - "settings.gradle.kts"
       - "gradle.properties"
       - ".github/workflows/android-client.yml"
   pull_request:
     paths:
       - "app/**"
+      - "scripts/build-android-openvpn3.sh"
       - "settings.gradle.kts"
       - "gradle.properties"
       - ".github/workflows/android-client.yml"
@@ -23,7 +25,7 @@ permissions:
 jobs:
   build-debug-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -37,7 +39,18 @@ jobs:
         with:
           packages: "platform-tools"
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+      - name: Set up vcpkg at the OpenVPN dependency baseline
+        env:
+          VCPKG_ROOT: ${{ runner.temp }}/vcpkg
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          git -C "$VCPKG_ROOT" fetch --depth 1 origin 69a1c33b4ba2b21e392c17e215ff637290778a97
+          git -C "$VCPKG_ROOT" checkout --detach 69a1c33b4ba2b21e392c17e215ff637290778a97
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$VCPKG_ROOT" >> "$GITHUB_ENV"
+      - name: Build OpenVPN 3 Core native library for ARM64
+        run: bash scripts/build-android-openvpn3.sh
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
