@@ -16,6 +16,7 @@ if(NOT DEFINED OPENVPN3_SWIG_WRAPPER OR NOT EXISTS "${OPENVPN3_SWIG_WRAPPER}")
 endif()
 add_library(freeroute_openvpn3 SHARED
   native_bridge.cpp
+  openvpn_client_bridge.cpp
   "${OPENVPN3_SOURCE_DIR}/client/ovpncli.cpp"
   "${OPENVPN3_SWIG_WRAPPER}"
 )
