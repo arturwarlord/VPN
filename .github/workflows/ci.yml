@@ -88,6 +88,12 @@ jobs:
           grep -q '^android.useAndroidX=true$' gradle.properties
           test -s app/build.gradle.kts
           test -s app/src/main/AndroidManifest.xml
+          grep -q 'FOREGROUND_SERVICE_SYSTEM_EXEMPTED' app/src/main/AndroidManifest.xml
+          grep -q 'android:foregroundServiceType="systemExempted"' app/src/main/AndroidManifest.xml
+          grep -q 'ACTION_START_FOREGROUND' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'VpnService.prepare(this)' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'startForeground(' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'ACTION_STOP' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3Core.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3SwigApi.kt
