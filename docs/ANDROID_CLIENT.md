@@ -5,6 +5,9 @@ FreeRoute is our custom app project. Users install the APK built from this repos
 ## Current MVP
 
 - Native Android interface with connect/disconnect state.
+- Distinguishes a locally started tunnel interface from a remote endpoint that has actually answered: after activation, the app checks WireGuard peer statistics for a handshake from the current connection session.
+- Shows "Туннель включён · сервер не ответил" instead of claiming a successful connection when no handshake arrives; it continues checking in case the endpoint becomes reachable.
+- The exit-country check stays disabled until a handshake has been observed for the current session.
 - Imports and validates WireGuard .conf files through Android's document picker.
 - Supports multiple local profiles so each device can keep a different selection.
 - Uses the input file name as the profile label; the file name is not proof of the server's country.
@@ -25,6 +28,7 @@ The debug APK is unsigned for distribution purposes and intended for personal in
 - There is no working country catalogue or server inventory yet. The country visible to websites is determined by the configured remote VPN endpoint, not by the client UI or profile label.
 - A reachable server outside Russia is still required for country switching.
 - Country discovery is only a diagnostic of the active connection, not a list of free VPN servers or a country selector.
+- A WireGuard handshake confirms that the configured peer answered; it does not prove working internet egress, correct country, DNS safety, or leak protection.
 - Full-tunnel IPv6/DNS leak testing and kill-switch behavior must be completed before relying on this app.
 - The manual country check sends the current public IP as seen by the IP-geolocation service. If the tunnel drops during the request, that service may see the normal internet connection IP instead.
 - Background operation on Xiaomi/POCO devices may require the user to allow background activity and disable battery restrictions. This needs real-device testing on the POCO X4 Pro 5G.
