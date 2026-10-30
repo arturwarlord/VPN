@@ -56,7 +56,7 @@ The official VPS regulation prohibits **open anonymous proxy servers that do not
 Official VPS product: https://serverplus.uz/en/products/cloud-vds-vps-servers  
 Cloud control panel: https://cloud.serverplus.uz/  
 Registration: https://auth.serverplus.uz/  
-Official public offer: https://www-test.serverplus.uz/company/publick-offer
+Official public offer: https://serverplus.uz/en/company/publick-offer
 
 The VPS is physically located in Tashkent. The provider documents full root/admin access, public IP, cloud firewall/security groups, and 100 Mbps Internet/TAS-IX/UZ-IX connectivity. The FAQ explicitly says a VPS can be used for a VPN and names WireGuard. The security-group documentation supports UDP ingress; inbound traffic is denied by default, so a specific UDP rule must be added for the chosen port.
 
@@ -69,6 +69,8 @@ The advertised new-user offer is 100,000 UZS of promo balance after identity con
 That totals about 5,333 UZS/day, or around 18.7 days for 100,000 UZS if those components can be ordered separately at the listed rates. The packaged monthly Universal Lite price is advertised at 160,000 UZS/month. Actual charging, taxes, promo restrictions, billing granularity and credit expiry may differ; ask support for a written quote before using any credit.
 
 The public offer has restrictions on web proxies and illegal international traffic transfer. The product FAQ's explicit WireGuard example is encouraging, but we should ask for written confirmation that a **private, authenticated tunnel limited to the user's own devices** is permitted. Do not offer a public VPN/proxy or resell the service.
+
+**Billing/contract check (official public offer reviewed 30 October 2026):** The offer is addressed to individuals. It describes services as prepaid: charges are deducted from the customer's account balance, not explicitly billed as post-paid usage. When the balance reaches zero, access is automatically suspended; VM data is retained for no more than 30 days, after which the contract can terminate and VM/configuration data is permanently deleted. The reviewed offer does not describe an automatic card charge or post-paid debt at zero balance. This does **not** prove that the advertised 100,000 UZS promotional credit can be activated without a card/top-up, or that no separate bonus rules apply. Confirm those points before registration or activating any service. Never add a card or personal funds under the €0 constraint.
 
 Identity confirmation is required to receive the promotional balance. The public offer and account process involve personal identity information. Never send passport, PINFL, SMS codes, passwords or account tokens to ChatGPT or this repository; enter documents only on the provider's verified official portal after deciding to proceed.
 
@@ -111,7 +113,7 @@ Ask UNICON and ServerPlus to answer all of these in writing:
 2. Is inbound UDP available on a public IPv4 address, and can we choose/listen on UDP 51820 or another fixed UDP port?
 3. Is outbound IPv4 Internet available for full-tunnel client traffic?
 4. Is the trial/bonus valid for a Linux VPS with root access, and does it require a payment card or wallet top-up?
-5. Does service stop automatically when trial credit reaches zero, with no automatic paid conversion or post-trial charge?
+5. What exactly happens when the trial/bonus reaches zero? Confirm that there is no debt, card charge or automatic paid conversion. For ServerPlus, specifically confirm that its public-offer zero-balance suspension rule also applies to promotional credit.
 6. What is the exact credit/trial expiry and the minimum configuration cost?
 
 ## Technical acceptance test before deployment
