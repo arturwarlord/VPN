@@ -35,6 +35,7 @@ import org.json.JSONObject
 
 class MainActivity : Activity() {
     private val pickProfileRequest = 4101
+    private val pickOpenVpnProfileRequest = 4105
     private val vpnConsentRequest = 4102
     private val openVpnServiceConsentRequest = 4103
     private val notificationPermissionRequest = 4104
@@ -65,6 +66,7 @@ class MainActivity : Activity() {
     private lateinit var disconnectButton: Button
     private lateinit var checkCountryButton: Button
     private lateinit var openVpnCoreButton: Button
+    private lateinit var openVpnProfileStatusView: TextView
 
     private data class SavedProfile(
         val fileName: String,
@@ -176,6 +178,26 @@ class MainActivity : Activity() {
             startActivityForResult(intent, pickProfileRequest)
         }
         root.addView(importButton, buttonLayout())
+
+        val importOpenVpnButton = makeButton("Импортировать профиль OpenVPN (.ovpn)", Color.rgb(92, 75, 130))
+        importOpenVpnButton.setOnClickListener {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+            }
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, pickOpenVpnProfileRequest)
+        }
+        root.addView(importOpenVpnButton, buttonLayout())
+
+        openVpnProfileStatusView = TextView(this).apply {
+            textSize = 12f
+            setTextColor(Color.rgb(170, 184, 210))
+            gravity = Gravity.CENTER
+            setPadding(dp(4), dp(8), dp(4), dp(4))
+        }
+        root.addView(openVpnProfileStatusView, matchWidthWrapHeight())
+        refreshOpenVpnProfileStatus()
 
         connectButton = makeButton("Подключить VPN", Color.rgb(39, 142, 101))
         connectButton.setOnClickListener { requestConnection() }
@@ -299,6 +321,15 @@ class MainActivity : Activity() {
     private fun profilesDirectory(): File =
         File(filesDir, "profiles").apply { mkdirs() }
 
+    private fun refreshOpenVpnProfileStatus() {
+        val count = OpenVpnProfileStore(this).list().size
+        openVpnProfileStatusView.text = if (count == 0) {
+            "OpenVPN: .ovpn профиль ещё не импортирован"
+        } else {
+            "OpenVPN: сохранено профилей — $count. Синтаксис и подключение ещё не проверены."
+        }
+    }
+
     private fun displayNameFor(uri: android.net.Uri): String {
         val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
         contentResolver.query(uri, projection, null, null, null)?.use { cursor: Cursor ->
@@ -331,7 +362,25 @@ class MainActivity : Activity() {
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == pickProfileRequest && resultCode == RESULT_OK) {
+        if (requestCode == pickOpenVpnProfileRequest && resultCode == RESULT_OK) {
+            val uri = data?.data ?: return
+            try {
+                val imported = OpenVpnProfileStore(this).import(
+                    contentResolver.openInputStream(uri)
+                        ?: throw IllegalArgumentException("Не удалось открыть выбранный файл."),
+                    displayNameFor(uri)
+                )
+                refreshOpenVpnProfileStatus()
+                Toast.makeText(
+                    this,
+                    "OpenVPN-профиль сохранён локально: " + imported.name + ". Подключение пока отключено.",
+                    Toast.LENGTH_LONG
+                ).show()
+            } catch (error: Exception) {
+                val message = error.message ?: "Неподдерживаемый файл."
+                Toast.makeText(this, "Не удалось импортировать .ovpn: " + message, Toast.LENGTH_LONG).show()
+            }
+        } else if (requestCode == pickProfileRequest && resultCode == RESULT_OK) {
             val uri = data?.data ?: return
             try {
                 val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
