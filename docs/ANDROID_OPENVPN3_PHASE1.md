@@ -17,8 +17,9 @@ This selection does not relicense FreeRoute, change the WireGuard Tunnel Library
 ## What is implemented
 
 - GitHub Actions fetches the exact pinned OpenVPN 3 Core commit.
-- vcpkg builds the Android ARM64 dependencies (Asio, fmt, LZ4 and OpenSSL) from source.
-- CMake builds `client/ovpncli.cpp` and a small JNI bridge into `libfreeroute_openvpn3.so`.
+- vcpkg 2026.10.16 builds the Android ARM64 dependencies from source: Asio 1.32.0, fmt 12.2.0, LZ4 1.10.0 and OpenSSL 3.6.5. Their full licenses are included in APK assets and in the in-app **О лицензиях** screen.
+- CMake builds `client/ovpncli.cpp` and a small JNI bridge into `libfreeroute_openvpn3.so`; the NDK strips debug sections before packaging.
+- A post-build CI step extracts the `.so` from the APK and verifies that it is an ARM64/AArch64 ELF with the expected JNI entry point.
 - Gradle packages the library for `arm64-v8a`, the architecture used by POCO X4 Pro 5G.
 - The app's **Диагностика OpenVPN Core** button calls upstream `ClientAPI::OpenVPNClientHelper::platform()` through JNI.
 - The existing WireGuard code path, profile storage and connection controls remain separate and unchanged.
