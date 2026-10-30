@@ -24,6 +24,8 @@ jobs:
           bash -n scripts/preflight-wireguard-host.sh
           bash -n scripts/check-workflow-shell.sh
           bash -n scripts/build-android-openvpn3.sh
+          grep -q 'swig -c++ -java -package net.openvpn.ovpn3' scripts/build-android-openvpn3.sh
+          grep -q 'System.loadLibrary("freeroute_openvpn3")' scripts/build-android-openvpn3.sh
           bash -n tests/validate-endpoint.sh
           bash -n tests/validate-firewall-policy.sh
           bash -n tests/validate-deploy-safety.sh
@@ -87,6 +89,7 @@ jobs:
           test -s app/src/main/AndroidManifest.xml
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3Core.kt
+          test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3SwigApi.kt
           test -s app/src/main/cpp/CMakeLists.txt
           test -s app/src/main/cpp/native_bridge.cpp
           test -s app/src/main/assets/OpenVPN3-MPL-2.0.txt
