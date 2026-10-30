@@ -111,6 +111,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `docs/SERVER_DEPLOYMENT.md` — deployment requirements and SSH pinning.
 - `docs/FREE_HOST_RESEARCH.md` — free-server candidates reviewed and reasons none is approved yet.
 - `docs/UZBEKISTAN_HOST_RESEARCH.md` — Uzbekistan VPS providers, free trials, promo credits and WireGuard policy checks.
+- `docs/PUBLIC_UZBEK_PROXY_VPN_LISTS.md` — review of public Uzbekistan proxy/VPN lists, endpoint reliability, protocol compatibility and security.
 - `docs/UZBEKISTAN_PROVIDER_SUPPORT_QUESTIONS.md` — copy-ready Russian/English questions for UNICON and ServerPlus support.
 - `docs/CLIENT_SMOKE_TEST.md` — safe temporary third-party WireGuard profile test before our own server exists.
 - `scripts/setup-wireguard.sh` — server bootstrap script.
