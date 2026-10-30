@@ -1,5 +1,6 @@
 package com.arturwarlord.vpnclient
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
@@ -9,9 +10,11 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.VpnService
 import android.os.Bundle
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
+import android.content.pm.PackageManager
 import android.view.Gravity
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -33,6 +36,9 @@ import org.json.JSONObject
 class MainActivity : Activity() {
     private val pickProfileRequest = 4101
     private val vpnConsentRequest = 4102
+    private val openVpnServiceConsentRequest = 4103
+    private val notificationPermissionRequest = 4104
+    private var pendingOpenVpnServiceStart = false
     private var backend: GoBackend? = null
     private var profile: Config? = null
     private var isConnected = false
@@ -187,6 +193,13 @@ class MainActivity : Activity() {
         openVpnCoreButton.setOnClickListener { diagnoseOpenVpnCore() }
         root.addView(openVpnCoreButton, buttonLayout())
 
+        val openVpnServiceTestButton = makeButton(
+            "Тест службы OpenVPN (без подключения)",
+            Color.rgb(92, 75, 130)
+        )
+        openVpnServiceTestButton.setOnClickListener { requestOpenVpnServiceSmokeTest() }
+        root.addView(openVpnServiceTestButton, buttonLayout())
+
         val licensesButton = makeButton("О лицензиях", Color.rgb(36, 48, 71))
         licensesButton.setOnClickListener { showLicenses() }
         root.addView(licensesButton, buttonLayout())
@@ -335,6 +348,73 @@ class MainActivity : Activity() {
             startTunnel()
         } else if (requestCode == vpnConsentRequest) {
             renderState("Подключение отменено")
+        } else if (requestCode == openVpnServiceConsentRequest) {
+            pendingOpenVpnServiceStart = false
+            if (resultCode == RESULT_OK) {
+                startOpenVpnServiceSmokeTest()
+            } else {
+                Toast.makeText(this, "Разрешение VPN не предоставлено; служба не запущена.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == notificationPermissionRequest && pendingOpenVpnServiceStart) {
+            // Android permits a foreground service when notification permission is denied,
+            // but may omit its notification from the drawer. Continue only with explicit tap.
+            continueOpenVpnServiceConsent()
+        }
+    }
+
+    private fun requestOpenVpnServiceSmokeTest() {
+        if (isConnected || isBusy) {
+            Toast.makeText(this, "Сначала отключи WireGuard перед проверкой службы OpenVPN.", Toast.LENGTH_LONG).show()
+            return
+        }
+        pendingOpenVpnServiceStart = true
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationPermissionRequest)
+        } else {
+            continueOpenVpnServiceConsent()
+        }
+    }
+
+    private fun continueOpenVpnServiceConsent() {
+        val consent = VpnService.prepare(this)
+        if (consent != null) {
+            @Suppress("DEPRECATION")
+            startActivityForResult(consent, openVpnServiceConsentRequest)
+        } else {
+            pendingOpenVpnServiceStart = false
+            startOpenVpnServiceSmokeTest()
+        }
+    }
+
+    private fun startOpenVpnServiceSmokeTest() {
+        val intent = Intent(this, OpenVpnVpnService::class.java).setAction(
+            OpenVpnVpnService.ACTION_START_FOREGROUND
+        )
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            Toast.makeText(
+                this,
+                "Служба OpenVPN запущена для проверки. VPN-туннель НЕ подключён.",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (_: Exception) {
+            Toast.makeText(this, "Не удалось запустить службу OpenVPN.", Toast.LENGTH_LONG).show()
         }
     }
 
