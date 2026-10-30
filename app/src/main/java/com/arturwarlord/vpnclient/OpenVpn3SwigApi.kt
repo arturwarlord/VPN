@@ -7,5 +7,9 @@ import net.openvpn.ovpn3.ClientAPI_OpenVPNClientHelper
  * The generated ovpncliJNI Java class loads libfreeroute_openvpn3.so.
  */
 internal object OpenVpn3SwigApi {
+    init {
+        System.loadLibrary("freeroute_openvpn3")
+    }
+
     fun platform(): String = ClientAPI_OpenVPNClientHelper.platform()
 }
