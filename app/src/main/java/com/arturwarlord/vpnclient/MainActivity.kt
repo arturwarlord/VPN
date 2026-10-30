@@ -535,8 +535,8 @@ class MainActivity : Activity() {
         openVpnCoreButton.isEnabled = false
         Thread {
             val result = try {
-                val platform = OpenVpn3Core.nativePlatform()
-                "Нативное ядро OpenVPN 3 загружено.\\nПлатформа: $platform\\n\\nЭто проверка сборки и вызова ClientAPI. Подключение OpenVPN, TUN-интерфейс, маршруты и DNS пока не реализованы."
+                val platform = OpenVpn3SwigApi.platform()
+                "Java/SWIG ClientAPI OpenVPN 3 загружен.\\nПлатформа: $platform\\n\\nЭто проверка сгенерированного SWIG API и нативного ядра. Подключение OpenVPN, TUN-интерфейс, маршруты и DNS пока не реализованы."
             } catch (error: Throwable) {
                 "Не удалось загрузить OpenVPN 3 Core.\\n\\nПричина: ${error.message ?: error.javaClass.simpleName}"
             }
@@ -544,7 +544,7 @@ class MainActivity : Activity() {
             runOnUiThread {
                 isOpenVpnCoreCheckRunning = false
                 openVpnCoreButton.isEnabled = true
-                val loaded = result.startsWith("Нативное ядро OpenVPN 3 загружено")
+                val loaded = result.startsWith("Java/SWIG ClientAPI OpenVPN 3 загружен")
                 AlertDialog.Builder(this)
                     .setTitle(if (loaded) "OpenVPN Core готов к следующему этапу" else "Ошибка OpenVPN Core")
                     .setMessage(result)
