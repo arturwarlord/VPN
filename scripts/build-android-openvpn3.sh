@@ -6,9 +6,12 @@ OPENVPN3_COMMIT="0abc8313b8fe5f63dbebc10d53094952957845d9"
 OPENVPN3_SOURCE_DIR="${OPENVPN3_SOURCE_DIR:-${RUNNER_TEMP:-/tmp}/freeroute-openvpn3-${OPENVPN3_COMMIT}}"
 BUILD_DIR="${ROOT_DIR}/app/build/native-openvpn3"
 JNI_OUTPUT_DIR="${ROOT_DIR}/app/build/generated/openvpn3/jniLibs/arm64-v8a"
+SWIG_JAVA_DIR="${ROOT_DIR}/app/build/generated/openvpn3/swig/java"
+SWIG_CPP_DIR="${ROOT_DIR}/app/build/generated/openvpn3/swig/cpp"
+SWIG_CPP="${SWIG_CPP_DIR}/ovpncli_wrap.cxx"
 
 fail() { echo "ERROR: $*" >&2; exit 1; }
-for cmd in git cmake ninja pkg-config; do command -v "$cmd" >/dev/null 2>&1 || fail "Missing command: $cmd"; done
+for cmd in git cmake ninja pkg-config swig; do command -v "$cmd" >/dev/null 2>&1 || fail "Missing command: $cmd"; done
 : "${VCPKG_ROOT:?VCPKG_ROOT must point to a bootstrapped vcpkg checkout}"
 : "${ANDROID_HOME:?ANDROID_HOME must point to the Android SDK}"
 ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-${ANDROID_HOME}/ndk/27.2.12479018}"
@@ -42,6 +45,22 @@ export VCPKG_TARGET_TRIPLET=arm64-android
 export PKG_CONFIG_PATH="${VCPKG_ROOT}/installed/arm64-android/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR="${PKG_CONFIG_PATH}"
 
+echo "Generating the upstream OpenVPN 3 Java/SWIG ClientAPI binding"
+mkdir -p "${SWIG_JAVA_DIR}" "${SWIG_CPP_DIR}"
+swig -c++ -java -package net.openvpn.ovpn3 \
+  -DOPENVPN_PLATFORM_ANDROID \
+  -I"${OPENVPN3_SOURCE_DIR}/client" \
+  -I"${OPENVPN3_SOURCE_DIR}" \
+  -outdir "${SWIG_JAVA_DIR}" \
+  -o "${SWIG_CPP}" \
+  "${OPENVPN3_SOURCE_DIR}/client/ovpncli.i"
+[[ -s "${SWIG_CPP}" ]] || fail "SWIG did not generate the C++ JNI wrapper"
+JNI_WRAPPER_JAVA="${SWIG_JAVA_DIR}/ovpncliJNI.java"
+HELPER_JAVA="${SWIG_JAVA_DIR}/ClientAPI_OpenVPNClientHelper.java"
+[[ -s "${JNI_WRAPPER_JAVA}" ]] || fail "SWIG did not generate ovpncliJNI.java"
+[[ -s "${HELPER_JAVA}" ]] || fail "SWIG did not generate ClientAPI_OpenVPNClientHelper.java"
+echo "SWIG generated the OpenVPN 3 Java ClientAPI. Kotlin loads libfreeroute_openvpn3.so before calling it."
+
 cmake -S "${ROOT_DIR}/app/src/main/cpp" -B "${BUILD_DIR}" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
@@ -49,7 +68,8 @@ cmake -S "${ROOT_DIR}/app/src/main/cpp" -B "${BUILD_DIR}" -G Ninja \
   -DVCPKG_TARGET_TRIPLET=arm64-android \
   -DVCPKG_INSTALLED_DIR="${VCPKG_ROOT}/installed" \
   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DANDROID_STL=c++_static \
-  -DOPENVPN3_SOURCE_DIR="${OPENVPN3_SOURCE_DIR}"
+  -DOPENVPN3_SOURCE_DIR="${OPENVPN3_SOURCE_DIR}" \
+  -DOPENVPN3_SWIG_WRAPPER="${SWIG_CPP}"
 
 cmake --build "${BUILD_DIR}" --target freeroute_openvpn3 --parallel 2
 LIBRARY_PATH="${BUILD_DIR}/libfreeroute_openvpn3.so"
