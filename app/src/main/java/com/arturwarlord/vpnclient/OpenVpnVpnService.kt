@@ -11,12 +11,13 @@ import android.os.Build
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import java.io.File
 
 /**
  * Android service boundary for OpenVPN 3.
  *
- * The foreground lifecycle is deliberately separate from native session startup:
- * this phase proves notification/service ownership only. It does not connect.
+ * Owns the OpenVPN service lifecycle. Profile evaluation is parser-only and
+ * never starts the native connection worker or establishes a TUN.
  */
 class OpenVpnVpnService : VpnService() {
     companion object {
@@ -26,13 +27,27 @@ class OpenVpnVpnService : VpnService() {
 
         const val ACTION_START_FOREGROUND = "com.arturwarlord.vpnclient.OPENVPN_START_FOREGROUND"
         const val ACTION_STOP = "com.arturwarlord.vpnclient.OPENVPN_STOP"
+        const val ACTION_EVALUATE_PROFILE = "com.arturwarlord.vpnclient.OPENVPN_EVALUATE_PROFILE"
+        const val EXTRA_PROFILE_PATH = "com.arturwarlord.vpnclient.EXTRA_PROFILE_PATH"
     }
+
+    @Volatile private var foregroundReady = false
+    @Volatile private var evaluationThread: Thread? = null
 
     override fun onBind(intent: Intent?): IBinder? = super.onBind(intent)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_FOREGROUND -> startForegroundSession()
+            ACTION_EVALUATE_PROFILE -> {
+                val path = intent.getStringExtra(EXTRA_PROFILE_PATH)
+                if (path.isNullOrBlank()) {
+                    Log.w(TAG, "Rejected profile evaluation without a path")
+                    stopSelf(startId)
+                } else if (startForegroundSession()) {
+                    evaluateProfileInBackground(path, startId)
+                }
+            }
             ACTION_STOP -> stopForegroundSession()
             else -> {
                 Log.w(TAG, "Ignored unsupported service action")
@@ -42,12 +57,12 @@ class OpenVpnVpnService : VpnService() {
         return START_NOT_STICKY
     }
 
-    private fun startForegroundSession() {
+    private fun startForegroundSession(): Boolean {
         // Consent must be granted by the Activity before the service is started.
         if (VpnService.prepare(this) != null) {
             Log.w(TAG, "VPN consent is missing; refusing to start foreground session")
             stopSelf()
-            return
+            return false
         }
 
         createNotificationChannel()
@@ -62,13 +77,17 @@ class OpenVpnVpnService : VpnService() {
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
+            foregroundReady = true
+            return true
         } catch (error: Exception) {
             Log.e(TAG, "Unable to enter foreground state", error)
+            foregroundReady = false
             stopSelf()
+            return false
         }
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(status: String = "Служба VPN активна; подключение ещё не запущено"): Notification {
         val openAppIntent = PendingIntent.getActivity(
             this,
             0,
@@ -86,7 +105,7 @@ class OpenVpnVpnService : VpnService() {
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
             .setContentTitle("FreeRoute · OpenVPN")
-            .setContentText("Служба VPN активна; подключение ещё не запущено")
+            .setContentText(status)
             .setContentIntent(openAppIntent)
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(true)
@@ -99,6 +118,47 @@ class OpenVpnVpnService : VpnService() {
                 ).build()
             )
             .build()
+    }
+
+    private fun evaluateProfileInBackground(path: String, startId: Int) {
+        if (evaluationThread?.isAlive == true) {
+            updateNotification("Проверка профиля уже выполняется")
+            return
+        }
+        val worker = Thread({
+            var accepted = false
+            try {
+                val profile = OpenVpnProfileStore(this).readText(File(path))
+                val session = OpenVpn3NativeSession(this)
+                try {
+                    accepted = session.evaluateProfile(profile)
+                } finally {
+                    session.close()
+                }
+            } catch (error: Exception) {
+                // Do not log profile text, credentials, or parser-provided details.
+                Log.w(TAG, "OpenVPN profile evaluation failed (" + error.javaClass.simpleName + ")")
+            }
+            if (!Thread.currentThread().isInterrupted && foregroundReady) {
+                updateNotification(
+                    if (accepted) "Профиль принят OpenVPN 3 Core; сервер не проверен"
+                    else "OpenVPN 3 Core не принял профиль"
+                )
+            }
+            evaluationThread = null
+            if (!foregroundReady) stopSelf(startId)
+        }, "FreeRoute-OpenVPN-profile-check")
+        evaluationThread = worker
+        worker.start()
+    }
+
+    private fun updateNotification(status: String) {
+        try {
+            getSystemService(NotificationManager::class.java)
+                .notify(NOTIFICATION_ID, buildNotification(status))
+        } catch (_: Exception) {
+            Log.w(TAG, "Unable to update profile evaluation notification")
+        }
     }
 
     private fun createNotificationChannel() {
@@ -115,6 +175,8 @@ class OpenVpnVpnService : VpnService() {
     }
 
     private fun stopForegroundSession() {
+        foregroundReady = false
+        evaluationThread?.interrupt()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -125,6 +187,8 @@ class OpenVpnVpnService : VpnService() {
     }
 
     override fun onDestroy() {
+        foregroundReady = false
+        evaluationThread?.interrupt()
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
