@@ -79,7 +79,10 @@ jobs:
           test -s app/src/main/AndroidManifest.xml
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           grep -q 'https://ipwho.is/' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
-          grep -q 'checkCountryButton.isEnabled = isConnected' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'getStatistics(tunnel)' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'latestHandshakeEpochMillis()' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'hasHandshakeForCurrentSession' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'checkCountryButton.isEnabled = isConnected && hasHandshakeForCurrentSession' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s docs/ANDROID_CLIENT.md
           test -s windows/FreeRoute.Windows.csproj
           test -s windows/MainForm.cs
