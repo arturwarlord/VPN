@@ -5,7 +5,7 @@
 
 ## Decision summary
 
-No candidate below is currently approved as a dependable long-term exit server for personal traffic. The server scripts and clients may continue to be developed without provisioning any host. Do not enter payment details, enable a paid plan, or create billable resources as part of this project unless the user explicitly changes the €0 constraint. TheUltraHost is the closest newly found conditional lab candidate, but it requires student verification, periodic manual keep-alive, and an IPv6 endpoint path that FreeRoute does not yet implement; it is not approved for deployment.
+No candidate below is approved as a dependable, unattended production exit server. **switched.cloud is now the best documented short prototype candidate**: its current terms explicitly allow personal VPNs, its VPS network advertises UDP port forwarding and public IPv6, and the first host is in France. It is not a permanent always-on solution because free Runtime must be replenished with Cloud Tokens earned through Linkvertise links, there are no backups, resources are shared, and availability is not guaranteed. A Linux LXC container may also lack the TUN / network capabilities required by our current server installer; this must be tested before deployment. Do not pay, enter payment details, or buy resources. TheUltraHost remains a conditional alternative only if student verification is available, but its free-tier terms page is marked as a draft and its site still labels itself a demo build.
 
 ## Candidates reviewed
 
@@ -59,19 +59,22 @@ The current official site advertises root SSH, KVM, a dedicated IPv4 and IPv6, b
 
 Official reference: https://alavps.com/ (FAQ and pricing sections)
 
-### TheUltraHost student VPS — conditional lab candidate, not a permanent endpoint
+### TheUltraHost student VPS — attractive specs, but not approved yet
 
-The official free plan advertises a KVM VPS with root access, 1 shared vCPU, 1 GB RAM, 15 GB NVMe, 250 GB/month, an IPv6 /64 and 20 NAT IPv4 forwarded ports. The provider explicitly describes a personal VPN over IPv6 as a possible use, but says public proxies are not allowed. Eligibility requires current student verification, and the server must be manually kept alive once every 30 days; otherwise it pauses after a further grace period.
+The current free-plan page advertises a KVM VPS with root access, 1 shared vCPU, 1 GB RAM, 15 GB NVMe, 250 GB/month, IPv6 /64 and 20 NAT IPv4 ports. It explicitly lists “a personal VPN over IPv6” as a suitable use, but excludes public proxies. Access is limited to verified students, with a manual Keep alive action every 30 days; otherwise the server pauses and is later deleted.
 
-This is the most relevant newly found candidate for a **short controlled prototype** if the account qualifies: a WireGuard endpoint might be reachable over native IPv6, and the forwarded IPv4 ports may be useful for client networks. However:
-- FreeRoute now supports a globally routable IPv6 address as the outer WireGuard endpoint. This does not provide inner IPv6 internet egress; the VPS still needs a working IPv4 default route/NAT, the forwarded UDP port must be reachable, and country geolocation must be verified.
-- The exact forwarded-port protocol options and IPv4 egress behavior still need verification before relying on it.
-- The 30-day manual keep-alive means it is not a fully unattended always-on endpoint.
-- Student eligibility is not assumed. Do not create an account or send profile/private-key material until eligibility, allowed personal VPN use, and actual UDP reachability are confirmed.
+Important trust and deployment caveats:
+- The published free-tier terms are labelled **“Draft for legal review · not yet binding”** and the site currently labels itself **“Demo build”** with placeholder prices. Treat the marketing page as an unverified offer, not a confirmed host contract.
+- Student eligibility is not assumed.
+- FreeRoute supports a public IPv6 literal as the outer WireGuard endpoint, but the server must still prove IPv4 egress/NAT for IPv4 websites and the selected client networks must be able to reach its IPv6 address.
+- The actual UDP forwarding/egress behavior, binding terms and geolocation must be verified before deployment.
+
+Do not create an account or send this provider server keys/client profiles until the eligibility and unfinished terms/site status have been resolved.
 
 Official references:
 - Plan and requirements: https://theultrahost.com/free-vps
 - Student verification: https://theultrahost.com/students
+- Free-tier terms (currently marked as a draft): https://theultrahost.com/legal/free-tier-terms
 
 ### VPSWala Starter — not suitable without further verification
 
@@ -128,13 +131,26 @@ References:
 - Allocation and policy: https://www.freevps.org/
 - Sponsor directory: https://www.freevps.org/sponsors.html
 
-### switched.cloud — can run briefly for testing, not an unattended server
+### switched.cloud — best current candidate for a short controlled WireGuard prototype
 
-The provider offers root access, five forwarded TCP/UDP ports on a shared IPv4, and one directly reachable IPv6 address. However, the account starts with only three days of Runtime. Each VPS consumes an hour of Runtime per hour it exists, and a Cloud Token adds one day (two days with Plus). Runtime is obtained through completed link/referral actions; when Runtime runs out, instances stop and are deleted if not topped up within three days. There are no backups, and allocations can change.
+The provider's current Terms of Service (effective 21 October 2026) confirm that switched.cloud runs Linux LXC containers and KVM virtual machines, with the first host on a Scaleway (Dedibox) server in France. It provides root access, one public IPv6 address and five TCP/UDP ports forwarded from a shared public IPv4 address. Crucially, its VPS-specific fair-use rules explicitly state: **“Personal proxies, VPNs, and tunnels are allowed”**, provided they are not used for prohibited activity.
 
-That does not satisfy a permanently online service without manual renewal or a sustained allowance of tokens, and the no-backup policy is undesirable for a VPN configuration. Do not use it for ongoing personal traffic. It could only be considered for a disposable short-lived build/port-forwarding experiment, after separately confirming the fair-use rules permit a private WireGuard endpoint.
+The free operation model is the main limitation:
+- A new account receives three days of Runtime.
+- A VPS consumes one hour of Runtime per hour that exists, even when shut down.
+- Cloud Tokens are earned through Linkvertise links; one token adds one day of Runtime, or two days with switched.cloud Plus.
+- When Runtime runs out, the VPS stops. Renew it within three days or it is deleted.
+- There are no VPS backups, resources/placement can change, outbound bandwidth is capped, and the provider gives no uptime guarantee.
 
-Official reference: https://switched.cloud/
+Network-wise this is materially better documented than most free-host leads: UDP is explicitly listed for the forwarded ports, and the public IPv6 address is reachable directly on every port. The shared IPv4 port mapping is potentially useful for IPv4-only client networks; the direct IPv6 endpoint is another option. The first advertised host location is France, outside Russia. The exact host address, exit IP country and inbound UDP path still need live verification.
+
+**Current blocker before deployment:** the free plan supplies LXC containers as well as KVM VMs. Our existing installer expects a normal Ubuntu/Debian host with systemd, WireGuard kernel/tunnel support, iptables/ip6tables, forwarding control and permission to manage host networking. The public documentation does not confirm that an LXC container has /dev/net/tun, CAP_NET_ADMIN, working firewall/NAT operations or the permissions required by wg-quick. A container that merely grants root inside its namespace may still fail these checks. Test those capabilities in a disposable instance first; do not run the production installer until they pass. A KVM VM is more compatible but requires switched.cloud Plus and sufficient earned Cloud Tokens; do not buy tokens or resources with money.
+
+**Decision:** use switched.cloud as the first candidate for a limited, non-sensitive prototype only after its LXC/KVM networking capability is confirmed. It is not a dependable permanently free endpoint and must not be presented as production-ready. Never automate Linkvertise completions or bypass its token system.
+
+Official references:
+- Network, Runtime, LXC/KVM and fair-use summary: https://switched.cloud/
+- Current Terms of Service and explicit personal VPN permission (version 2026-10-21): https://noprofit.space/terms
 
 ### Openworld — not approved for unattended service
 
@@ -163,10 +179,11 @@ OpenClaw Cloud advertises a public IP and SSH access, but its own page states th
 Before deploying, verify all of the following using provider documentation or an actual disposable test:
 1. Explicitly permitted private personal VPN / WireGuard use.
 2. Stable public endpoint outside Russia, reachable from Windows, Android and iPhone networks.
-3. Root privileges and working WireGuard kernel/tunnel support.
+3. Root privileges and working WireGuard kernel/tunnel support; for LXC, explicitly verify /dev/net/tun, CAP_NET_ADMIN, systemd, forwarding and firewall permissions before attempting installation.
 4. Inbound UDP forwarding (or a dedicated public IP) and the ability to retain the port after a restart.
 5. Sufficient monthly outbound traffic for actual use.
 6. Clearly bounded costs: no expiring credits, paid-only conversion, unbounded billing, or unrequested upgrades.
 7. A provider identity and reputation credible enough for traffic that will pass through the server.
+8. Understand the operator's access, automated abuse scanning, retention and backup policies; do not route sensitive traffic through an experimental host.
 
 Until a candidate passes the checklist, keep the service marked **not live**, don't create a server, and don't claim that country switching works.
