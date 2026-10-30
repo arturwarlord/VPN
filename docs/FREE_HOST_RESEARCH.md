@@ -5,7 +5,7 @@
 
 ## Decision summary
 
-No candidate below is approved as a dependable, unattended production exit server. **switched.cloud is now the best documented short prototype candidate**: its current terms explicitly allow personal VPNs, its VPS network advertises UDP port forwarding and public IPv6, and the first host is in France. It is not a permanent always-on solution because free Runtime must be replenished with Cloud Tokens earned through Linkvertise links, there are no backups, resources are shared, and availability is not guaranteed. A Linux LXC container may also lack the TUN / network capabilities required by our current server installer; this must be tested before deployment. Do not pay, enter payment details, or buy resources. TheUltraHost remains a conditional alternative only if student verification is available, but its free-tier terms page is marked as a draft and its site still labels itself a demo build.
+No candidate below is approved as a dependable, unattended production exit server. The user tried switched.cloud but its panel reported **no VPS/container capacity available**, so it is not actionable right now. **Openworld is the next candidate to investigate**: its official FAQ documents public IPv6, NAT IPv4, root SSH and full systemd access inside containers. It remains conditional because private personal WireGuard use, inbound UDP and TUN/CAP_NET_ADMIN need confirmation and testing. Openworld also requires manual renewal every 24 hours. Do not pay or enable a paid tier. NeoHeberg is excluded because its free VPS is IPv6-only with no outbound IPv4 NAT; its dedicated IPv4 costs extra.
 
 ## Candidates reviewed
 
@@ -45,13 +45,14 @@ Official references:
 - https://aws.amazon.com/free/
 - https://aws.amazon.com/free/free-tier-faqs/
 
-### vyce.cloud VPS-Mini — interesting, but not an approved endpoint yet
+### vyce.cloud VPS-Mini — availability and suitability not confirmed
 
-The provider currently advertises a $0 VPS-Mini with 1 CPU, 2 GB RAM, 6 GB storage, root SSH access, a public IPv6 address, and 20 ports (one reserved for SSH). Free capacity is limited, and the account needs a GitHub account at least 30 days old. The dashboard requires renewal; a stopped instance is deleted after three days if not renewed.
+The official page advertises a free VPS-Mini with 1 CPU, 2 GB RAM, 6 GB storage, root SSH, public IPv6 and 20 ports (one reserved for SSH). It says free slots are limited and servers must be renewed from the dashboard; a stopped instance is deleted after three days. A third-party community listing marked the promotion expired on 27 October 2026 after reports that its queue was not moving. This is not an authoritative provider notice, but do not assume a free slot is obtainable without live confirmation.
 
-The important gap remains network compatibility: the published summary does not clearly confirm that an inbound UDP port can be reached over IPv4, and a public IPv6 endpoint is not proof of a working IPv4 internet exit. FreeRoute now validates public IPv6 literals for the outer WireGuard endpoint, but the server still requires working IPv4 routing/NAT for IPv4 websites. Before treating this host as viable, verify the exact UDP forwarding behavior, IPv4 egress, acceptable-use terms for a private personal WireGuard server, and reliable no-cost renewal.
+The page does not clearly document inbound UDP semantics, IPv4 egress/NAT or whether WireGuard is allowed. Do not rely on this candidate until a free VPS can actually be claimed and its network tested.
 
 Official reference: https://vyce.cloud/
+Community availability report: https://bansos.dev/list/vyce-free-vps/
 
 ### AlaVPS Free VPS — rejected as a permanent zero-cost host
 
@@ -131,9 +132,11 @@ References:
 - Allocation and policy: https://www.freevps.org/
 - Sponsor directory: https://www.freevps.org/sponsors.html
 
-### switched.cloud — best current candidate for a short controlled WireGuard prototype
+### switched.cloud — no capacity available when the user tried to provision
 
 The provider's current Terms of Service (effective 21 October 2026) confirm that switched.cloud runs Linux LXC containers and KVM virtual machines, with the first host on a Scaleway (Dedibox) server in France. It provides root access, one public IPv6 address and five TCP/UDP ports forwarded from a shared public IPv4 address. Crucially, its VPS-specific fair-use rules explicitly state: **“Personal proxies, VPNs, and tunnels are allowed”**, provided they are not used for prohibited activity.
+
+**Current availability blocker:** the user reached the provider panel but could not create a VPS because no containers were available. Do not ask the user to keep retrying the same full panel or treat advertised plan limits as free capacity. Revisit only after the provider announces capacity again.
 
 The free operation model is the main limitation:
 - A new account receives three days of Runtime.
@@ -146,21 +149,28 @@ Network-wise this is materially better documented than most free-host leads: UDP
 
 **Current blocker before deployment:** the free plan supplies LXC containers as well as KVM VMs. Our existing installer expects a normal Ubuntu/Debian host with systemd, WireGuard kernel/tunnel support, iptables/ip6tables, forwarding control and permission to manage host networking. The public documentation does not confirm that an LXC container has /dev/net/tun, CAP_NET_ADMIN, working firewall/NAT operations or the permissions required by wg-quick. A container that merely grants root inside its namespace may still fail these checks. Test those capabilities in a disposable instance first; do not run the production installer until they pass. A KVM VM is more compatible but requires switched.cloud Plus and sufficient earned Cloud Tokens; do not buy tokens or resources with money.
 
-**Decision:** use switched.cloud as the first candidate for a limited, non-sensitive prototype only after its LXC/KVM networking capability is confirmed. It is not a dependable permanently free endpoint and must not be presented as production-ready. Never automate Linkvertise completions or bypass its token system.
+**Decision:** keep switched.cloud on hold until the provider releases capacity. It remains a possible short prototype only; do not purchase Runtime, Plus or resources. It is not a dependable permanently free endpoint and must not be presented as production-ready. Never automate Linkvertise completions or bypass its token system.
 
 Official references:
 - Network, Runtime, LXC/KVM and fair-use summary: https://switched.cloud/
 - Current Terms of Service and explicit personal VPN permission (version 2026-10-21): https://noprofit.space/terms
 
-### Openworld — not approved for unattended service
+### Openworld — next conditional candidate for a one-device prototype
 
-The current official FAQ confirms NAT IPv4 plus a dedicated public IPv6 address, but free VPS periods last seven days and must be renewed once every 24 hours to reset their countdown. Its current terms prohibit operating open proxies or VPNs for malicious purposes; they do not clearly say that a private personal VPN is categorically banned. Even so, renewal requirements conflict with the project's fully unattended objective, and the endpoint's IPv6-/NAT-based networking still needs a verified UDP reachability test.
+The current official FAQ documents no-card free access, NAT IPv4, a dedicated public IPv6 address, root SSH access, and containers with full systemd access. Free VPS periods last seven days and can be renewed once every 24 hours; an unrenewed VPS is suspended. The main page reports three nodes and 145 VPS instances in total, but those aggregate counts do not prove that a free slot is available.
 
-Official references: https://openworld.eu.org/faq and https://openworld.eu.org/tos
+The terms prohibit open proxies or VPNs for malicious purposes; they do not explicitly ban a private VPN for the owner's own devices. Still, get written confirmation that a private, non-public WireGuard tunnel is permitted and that UDP listening on the dedicated IPv6 address is supported.
+
+**Technical gate:** full systemd access does not prove that a container has /dev/net/tun, effective CAP_NET_ADMIN, WireGuard kernel support, iptables/ip6tables permissions or host-network forwarding. Run the read-only FreeRoute preflight before installation. FreeRoute would use public IPv6 for the outer WireGuard UDP endpoint and NAT IPv4 for ordinary IPv4 internet egress. The client networks must also have working IPv6. Check this on the POCO's actual Wi-Fi and mobile networks. Confirm UDP reachability and exit-IP geolocation before generating client profiles.
+
+The daily renewal requirement is not unattended. Treat this only as a short, non-sensitive prototype unless a stable no-cost renewal process can be used with the provider's permission. Do not bypass provider controls or use paid upgrades.
+
+Official references:
+- FAQ: https://openworld.eu.org/faq
+- Terms of Service (last updated 25 July 2026): https://openworld.eu.org/tos
+- Main page and aggregate VPS counts: https://openworld.eu.org/
 
 
-
-The free plan includes NAT IPv4 and a dedicated public IPv6 address, but instances must be renewed every seven days and automatically suspend when the renewal is missed. That conflicts with fully automated always-on operation. https://openworld.eu.org/faq
 
 ### vpsFree.cz — not free
 
@@ -169,6 +179,20 @@ The community/nonprofit VPS requires membership dues of 300 CZK per month (36 EU
 ### Route64 — tunnel service, not a compute host
 
 Route64 offers a free IPv6 tunnelbroker that can route an IPv6 subnet through its network, but it does not provide the Linux VM or dedicated WireGuard exit server this project needs. Its static-IP tunnels are described as supporter's services. A home/VPS endpoint is still needed, and an IPv6-only tunnel does not carry IPv4 full-tunnel traffic. Reference: https://www.route64.org/en
+
+### NeoHeberg VPS Free — excluded: no outbound IPv4 on the free plan
+
+NeoHeberg advertises a €0/month VPS with no credit card, 512 MB RAM, 5 GB SSD, 25% of one vCPU, 250 GB/month, root access and public IPv6. Its services are hosted in Paris, France, and its help center says VPSs are deployed on Proxmox.
+
+The current pricing page explicitly states that all VPS plans are IPv6-only and have no outbound IPv4 NAT. A dedicated IPv4 costs an additional €1.50/month, which violates the hard budget. Our current FreeRoute server design depends on IPv4 egress/NAT so clients can reach ordinary IPv4 internet destinations. The help-center article contains an older conflicting statement about IPv4 NAT; follow the newer explicit pricing/network specification and do not provision the free plan for this project.
+
+The terms do not explicitly mention or permit private WireGuard use, and say services are subject to available resources and fair-use rules. Although the free plan has root access and one automatic backup, the lack of outbound IPv4 makes it unsuitable for the current full-tunnel target without a separate IPv4-translation design and another trustworthy NAT64/transit provider.
+
+Official references:
+- Current pricing and IPv6-only/no-outbound-IPv4 notice: https://neoheberg.fr/en/prices
+- Account, France location and no-card details: https://neoheberg.fr/en/help/compte-facturation
+- Terms (updated 9 October 2026): https://neoheberg.fr/en/conditions
+- VPS creation via Proxmox: https://neoheberg.fr/help/vps/?article=creer-premier-vps-neoheberg&type=offre_vps
 
 ### OpenClaw Cloud free computer — trial period only
 
