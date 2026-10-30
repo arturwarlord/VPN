@@ -2,6 +2,10 @@
 
 FreeRoute is our custom app project. Users install the APK built from this repository; they do not need to install a separate consumer VPN app.
 
+## OpenVPN 3 experimental transport
+
+See [Android OpenVPN 3 Core — phase 1](ANDROID_OPENVPN3_PHASE1.md). The experimental build packages the upstream OpenVPN 3 C++ core for ARM64 and exposes a diagnostic button through JNI. It does **not** connect to OpenVPN servers yet. The existing WireGuard transport remains the only implemented connection path.
+
 ## Current MVP
 
 - Native Android interface with connect/disconnect state.
