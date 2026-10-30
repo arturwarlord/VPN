@@ -8,9 +8,14 @@ on:
         required: true
         type: string
       port:
-        description: WireGuard UDP port
+        description: WireGuard UDP port (use the provider's forwarded UDP port if applicable)
         required: true
         default: "51820"
+        type: string
+      ssh_port:
+        description: SSH port shown in the VPS provider panel
+        required: true
+        default: "22"
         type: string
 
 permissions:
@@ -35,11 +40,16 @@ jobs:
           VPN_KNOWN_HOSTS: ${{ secrets.VPN_KNOWN_HOSTS }}
           ENDPOINT_IP: ${{ inputs.endpoint_ip }}
           WG_PORT: ${{ inputs.port }}
+          SSH_PORT: ${{ inputs.ssh_port }}
         shell: bash
         run: |
           set -euo pipefail
           [[ -n "$VPN_HOST" && -n "$VPN_USER" && -n "$VPN_SSH_KEY" && -n "$VPN_KNOWN_HOSTS" ]] || {
             echo "Add VPN_HOST, VPN_USER, VPN_SSH_KEY and VPN_KNOWN_HOSTS repository secrets." >&2
+            exit 1
+          }
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]] && (( 10#$SSH_PORT >= 1 && 10#$SSH_PORT <= 65535 )) || {
+            echo "ssh_port must be an integer from 1 to 65535." >&2
             exit 1
           }
           python3 - "$ENDPOINT_IP" "$WG_PORT" <<'PY'
@@ -142,16 +152,23 @@ jobs:
         env:
           VPN_HOST: ${{ secrets.VPN_HOST }}
           VPN_USER: ${{ secrets.VPN_USER }}
+          SSH_PORT: ${{ inputs.ssh_port }}
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "$RUNNER_TEMP/vpn_key" \
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]] && (( 10#$SSH_PORT >= 1 && 10#$SSH_PORT <= 65535 ))
+          if [[ "$VPN_USER" == "root" ]]; then
+            remote_command="true"
+          else
+            remote_command="sudo -n true"
+          fi
+          ssh -p "$SSH_PORT" -i "$RUNNER_TEMP/vpn_key" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$RUNNER_TEMP/vpn_known_hosts" \
             -o GlobalKnownHostsFile=/dev/null \
             -o UpdateHostKeys=no \
-            "$VPN_USER@$VPN_HOST" "sudo -n true"
+            "$VPN_USER@$VPN_HOST" "$remote_command"
 
       - name: Install VPN server over SSH
         env:
@@ -159,16 +176,23 @@ jobs:
           VPN_USER: ${{ secrets.VPN_USER }}
           ENDPOINT_IP: ${{ inputs.endpoint_ip }}
           WG_PORT: ${{ inputs.port }}
+          SSH_PORT: ${{ inputs.ssh_port }}
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "$RUNNER_TEMP/vpn_key" \
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]] && (( 10#$SSH_PORT >= 1 && 10#$SSH_PORT <= 65535 ))
+          if [[ "$VPN_USER" == "root" ]]; then
+            remote_command="env WG_ENDPOINT='$ENDPOINT_IP' WG_PORT='$WG_PORT' bash -s"
+          else
+            remote_command="sudo -n env WG_ENDPOINT='$ENDPOINT_IP' WG_PORT='$WG_PORT' bash -s"
+          fi
+          ssh -p "$SSH_PORT" -i "$RUNNER_TEMP/vpn_key" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$RUNNER_TEMP/vpn_known_hosts" \
             -o GlobalKnownHostsFile=/dev/null \
             -o UpdateHostKeys=no \
-            "$VPN_USER@$VPN_HOST" "sudo -n env WG_ENDPOINT='$ENDPOINT_IP' WG_PORT='$WG_PORT' bash -s" < scripts/setup-wireguard.sh
+            "$VPN_USER@$VPN_HOST" "$remote_command" < scripts/setup-wireguard.sh
 
       - name: Remove temporary SSH material
         if: always()
