@@ -40,6 +40,7 @@ class MainActivity : Activity() {
     private val openVpnServiceConsentRequest = 4103
     private val notificationPermissionRequest = 4104
     private var pendingOpenVpnServiceStart = false
+    private var pendingOpenVpnProfilePath: String? = null
     private var backend: GoBackend? = null
     private var profile: Config? = null
     private var isConnected = false
@@ -376,6 +377,14 @@ class MainActivity : Activity() {
                     "OpenVPN-профиль сохранён локально: " + imported.name + ". Подключение пока отключено.",
                     Toast.LENGTH_LONG
                 ).show()
+                AlertDialog.Builder(this)
+                    .setTitle("Профиль OpenVPN импортирован")
+                    .setMessage("Проверить его конфигурацию локальным ядром OpenVPN 3? Это не подключает сервер и не меняет маршруты.")
+                    .setNegativeButton("Позже", null)
+                    .setPositiveButton("Проверить") { _, _ ->
+                        requestOpenVpnProfileEvaluation(imported.absolutePath)
+                    }
+                    .show()
             } catch (error: Exception) {
                 val message = error.message ?: "Неподдерживаемый файл."
                 Toast.makeText(this, "Не удалось импортировать .ovpn: " + message, Toast.LENGTH_LONG).show()
@@ -400,7 +409,7 @@ class MainActivity : Activity() {
         } else if (requestCode == openVpnServiceConsentRequest) {
             pendingOpenVpnServiceStart = false
             if (resultCode == RESULT_OK) {
-                startOpenVpnServiceSmokeTest()
+                startPendingOpenVpnServiceTask()
             } else {
                 Toast.makeText(this, "Разрешение VPN не предоставлено; служба не запущена.", Toast.LENGTH_LONG).show()
             }
@@ -417,6 +426,22 @@ class MainActivity : Activity() {
         if (requestCode == notificationPermissionRequest && pendingOpenVpnServiceStart) {
             // Android permits a foreground service when notification permission is denied,
             // but may omit its notification from the drawer. Continue only with explicit tap.
+            continueOpenVpnServiceConsent()
+        }
+    }
+
+    private fun requestOpenVpnProfileEvaluation(profilePath: String) {
+        if (isConnected || isBusy) {
+            Toast.makeText(this, "Сначала отключи WireGuard перед проверкой OpenVPN.", Toast.LENGTH_LONG).show()
+            return
+        }
+        pendingOpenVpnProfilePath = profilePath
+        pendingOpenVpnServiceStart = true
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationPermissionRequest)
+        } else {
             continueOpenVpnServiceConsent()
         }
     }
@@ -443,7 +468,30 @@ class MainActivity : Activity() {
             startActivityForResult(consent, openVpnServiceConsentRequest)
         } else {
             pendingOpenVpnServiceStart = false
+            startPendingOpenVpnServiceTask()
+        }
+    }
+
+    private fun startPendingOpenVpnServiceTask() {
+        val profilePath = pendingOpenVpnProfilePath
+        pendingOpenVpnProfilePath = null
+        if (profilePath != null) {
+            startOpenVpnProfileEvaluation(profilePath)
+        } else {
             startOpenVpnServiceSmokeTest()
+        }
+    }
+
+    private fun startOpenVpnProfileEvaluation(profilePath: String) {
+        val intent = Intent(this, OpenVpnVpnService::class.java)
+            .setAction(OpenVpnVpnService.ACTION_EVALUATE_PROFILE)
+            .putExtra(OpenVpnVpnService.EXTRA_PROFILE_PATH, profilePath)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+            else startService(intent)
+            Toast.makeText(this, "Проверка профиля OpenVPN 3 запущена. Подключения к серверу нет.", Toast.LENGTH_LONG).show()
+        } catch (_: Exception) {
+            Toast.makeText(this, "Не удалось запустить проверку профиля OpenVPN.", Toast.LENGTH_LONG).show()
         }
     }
 
