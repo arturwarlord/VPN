@@ -22,7 +22,7 @@ No account has been created, no identity documents have been submitted, no VPS h
 | UNICON Cloud | Tashkent; public IPv4; flexible cloud firewall/routing; private VPN networking appears in the product catalogue | Separate promotion advertises 30 days free | AUP bans open anonymous proxies, not clearly private authenticated WireGuard; promotion details need confirmation | **First trial to verify** |
 | ServerPlus | Tashkent; public IP; root VPS; cloud security groups support UDP ingress | 100,000 UZS promo balance after identity confirmation | FAQ expressly mentions WireGuard; public offer also restricts web proxies and illegal traffic transfer, so confirm private device-only use | **Best WireGuard-documented credit offer** |
 | UzCloud / Uztelecom | Uzbekistan Tier III sites; KVM; root; public IPv4 available as an add-on | 7 days free without a card | Public offer clause 3.1.13 prohibits VPN/proxy server use and related software | **Exclude unless written exception** |
-| MyCloud | Tashkent; root VPS; public IP; daily billing | One free launch day, but charging starts at the next midnight | Need confirm whether a wallet top-up is required to create; daily billing can start automatically | **Not a safe €0 option yet** |
+| MyCloud | Tashkent; root VPS; public IP; daily billing | Live VPS page says launch day is not billed; an indexed FAQ copy says there is no free trial for new customers | Balance top-up and automatic daily billing at 00:00; exact zero-cost eligibility is unclear | **Not a safe €0 option** |
 | ACDN | Tashkent; KVM; public IPv4; unmetered traffic claim | No free credit/trial found | Paid plan only; WireGuard permission not clearly published | **Paid fallback only** |
 | Dicloud | Tashkent; root VPS; public IP | No free trial found | VPN / remote access listed as a use case; monthly price is substantially higher | **Paid fallback only** |
 | UZSCINET / Medanta | Tashkent; dedicated IP and routing | No verified free trial | Entry plan is very small; current site labels its service as test mode | **Not suitable for the first build** |
@@ -92,9 +92,9 @@ However, clause 3.1.13 of its public offer explicitly prohibits using the hostin
 Official VPS page: https://mycloud.uz/en/vps-servers  
 Account guide: https://mycloud.uz/
 
-The entry configuration is listed at about 4,000 UZS/day for 1 vCPU, 1 GB RAM, 20 GB SSD and one IP. The provider describes a free launch day: if a server is created during the day, billing is due from the next midnight. A free day is not the same as an ongoing trial. Its signup and provisioning flow may require a funded wallet; confirm that before creating anything.
+The live VPS page lists a Start configuration at 4,000 UZS/day (1 vCPU, 1 GB RAM, 20 GB SSD, one IP) with Ubuntu/Debian, root access and Internet/TAS-IX/UZ-IX. Its current FAQ says the launch day is not billed and the first charge occurs at the nearest 00:00. The same page says the customer tops up a balance, charges are taken daily at 00:00, and a server automatically renews while funds remain. An indexed FAQ copy for the same URL says there is no free test for new customers, so the public descriptions are not fully consistent. Even taking the launch-day statement at face value, it is not a safe €0 offer unless MyCloud confirms that provisioning requires no paid balance/top-up and that the account cannot incur any charge. The page also says service is suspended at zero balance and VM data is deleted after 7 days.
 
-The provider's terms do not give us sufficient certainty about a private WireGuard endpoint and the exact public UDP path. If this were ever used for a disposable one-day test, the instance would need to be deleted before billing begins, and support would first need to confirm no deposit or top-up is required.
+The provider's terms do not give us sufficient certainty about a private WireGuard endpoint and the exact public UDP path. Do not create a VM or add funds under our strict €0 constraint. A one-day non-billed launch window is not the same as a zero-cost VPS trial.
 
 **Decision:** not the first option under the strict €0 rule.
 
@@ -105,6 +105,9 @@ The provider's terms do not give us sufficient certainty about a private WireGua
 - **UZSCINET / Medanta:** VDS entry pricing from about 54,000 UZS/month, but the listed smallest configuration is very limited (around 750 MHz CPU, 384 MB RAM and 10 GB disk), and the current site is in test mode. https://uzscinet.uz/
 - **Airnet.uz:** advertises trial access by arrangement, but its FAQ says there is no free VPS test. Confirm directly rather than assume a free offer. https://airnet.uz/
 - **HOSTIN.UZ:** a 72-hour money-back period requires paying for the order first. This is not a €0 trial. https://hostin.uz/
+- **SkyCloud.uz:** its VPS FAQ explicitly says free VPS testing is not available; it offers only paid minimum-period or hourly configurations. No zero-cost route found. https://skycloud.uz/cloud/vps-vds/
+- **SurkhanDC.uz:** the provider markets VPS with root access, but its own page says servers are in Germany and only says account registration is free. Free registration is not free compute; no free VPS trial or credit was identified. https://surkhandc.uz/ru
+- **Uztelecom “Test service”:** the page lists monthly CPU/RAM prices rather than a free allocation, and does not establish a free VPN-eligible VPS trial. Treat the word “test” in the product title as no proof of free hosting. https://uztelecom.uz/ru/chastnym-licam/oblachnye-servisy/testovyy-servis/
 
 ## Questions to send providers before account creation
 
