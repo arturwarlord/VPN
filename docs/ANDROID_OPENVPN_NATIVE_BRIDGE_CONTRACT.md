@@ -105,9 +105,21 @@ explicitly or reject the configuration with a clear error.
 
 ## Current status
 
-The Android TUN service and SWIG diagnostic binding exist on earlier branches. There is
-not yet a concrete native `OpenVPNClient` subclass, JNI lifecycle bridge, working
-OpenVPN connection, or end-to-end server test. WireGuard remains the working VPN path.
+The Android TUN service and SWIG ClientAPI binding are present. The current draft PR
+contains a concrete `OpenVPNClient` subclass and an initial JNI ownership/protection
+bridge:
+
+- `JNI_OnLoad` stores the process `JavaVM*`.
+- Kotlin `OpenVpn3NativeSession` owns a native client handle and releases it idempotently.
+- The client retains a global reference to the live `OpenVpnVpnService`.
+- `socket_protect` calls `protectSocketDescriptor(fd)` on the Android service and
+  fails closed on a missing callback, Java exception, or failed protection.
+- Native callbacks do not yet start a worker or invoke `connect()`.
+
+This is still not a working OpenVPN connection. TUN-builder callback translation,
+profile evaluation/import, credential handling, worker-thread connect/stop lifecycle,
+foreground-service behavior, and end-to-end server tests remain outstanding.
+WireGuard remains the working VPN path.
 
 
 ## Exact callback signature details (verified against pinned headers)
