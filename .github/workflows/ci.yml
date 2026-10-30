@@ -25,7 +25,8 @@ jobs:
           bash -n scripts/check-workflow-shell.sh
           bash -n scripts/build-android-openvpn3.sh
           grep -q 'swig -c++ -java -package net.openvpn.ovpn3' scripts/build-android-openvpn3.sh
-          grep -q 'System.loadLibrary("freeroute_openvpn3")' scripts/build-android-openvpn3.sh
+          grep -q 'ClientAPI_OpenVPNClientHelper.java' scripts/build-android-openvpn3.sh
+          grep -q 'System.loadLibrary("freeroute_openvpn3")' app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3SwigApi.kt
           bash -n tests/validate-endpoint.sh
           bash -n tests/validate-firewall-policy.sh
           bash -n tests/validate-deploy-safety.sh
