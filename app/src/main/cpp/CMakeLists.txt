@@ -21,5 +21,7 @@ if(_freeroute_openvpn3_links)
   set_property(TARGET freeroute_openvpn3 PROPERTY LINK_LIBRARIES "${_freeroute_openvpn3_links}")
 endif()
 target_compile_options(freeroute_openvpn3 PRIVATE -fexceptions -frtti)
-target_link_libraries(freeroute_openvpn3 PRIVATE log)
+# OpenVPN's dependency helper uses the plain target_link_libraries signature.
+# Keep this call plain as well; CMake rejects mixing plain and keyword signatures.
+target_link_libraries(freeroute_openvpn3 log)
 set_target_properties(freeroute_openvpn3 PROPERTIES OUTPUT_NAME "freeroute_openvpn3" CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
