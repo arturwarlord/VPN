@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OPENVPN3_COMMIT="0abc8313b8fe5f63dbebc10d53094952957845d9"
-VCPKG_BASELINE="69a1c33b4ba2b21e392c17e215ff637290778a97"
 OPENVPN3_SOURCE_DIR="${OPENVPN3_SOURCE_DIR:-${RUNNER_TEMP:-/tmp}/freeroute-openvpn3-${OPENVPN3_COMMIT}}"
 BUILD_DIR="${ROOT_DIR}/app/build/native-openvpn3"
 JNI_OUTPUT_DIR="${ROOT_DIR}/app/build/generated/openvpn3/jniLibs/arm64-v8a"
@@ -33,7 +32,6 @@ cat > "${VCPKG_MANIFEST_DIR}/vcpkg.json" <<JSON
 {
   "name": "freeroute-openvpn3-android",
   "version-string": "0.1.0",
-  "builtin-baseline": "${VCPKG_BASELINE}",
   "dependencies": ["asio", "fmt", "lz4", "openssl"]
 }
 JSON
