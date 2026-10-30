@@ -94,6 +94,10 @@ jobs:
           grep -q 'VpnService.prepare(this)' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           grep -q 'startForeground(' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           grep -q 'ACTION_STOP' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'Build.VERSION.SDK_INT >= 34' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'requestOpenVpnServiceSmokeTest' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'POST_NOTIFICATIONS' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'startForegroundService(intent)' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3Core.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3SwigApi.kt
