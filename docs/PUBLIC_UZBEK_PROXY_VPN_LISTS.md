@@ -9,7 +9,8 @@ These websites are useful as **discovery feeds**, not as a production VPN backen
 
 - **No listed HTTP/HTTPS/SOCKS proxy is a WireGuard endpoint.** It cannot be imported into the current WireGuard client as a `.conf` profile.
 - Public HTTP/HTTPS/SOCKS proxies may relay individual application connections. Routing all traffic from Android, Windows or iOS through them would require a separate proxy/tun2socks transport path and leak/DNS/UDP handling. SOCKS5 defines an optional UDP ASSOCIATE operation, but a specific public server must actually implement it. HTTP CONNECT is a TCP tunnel, not a general-purpose WireGuard or UDP tunnel.
-- **ProxyFreeOnly is the only supplied link that currently shows a separate free VPN endpoint in its Uzbekistan list.** The page showed one endpoint, with the row last updated four days earlier; its username/password were hidden and the page did not state the protocol. Its own terms say it is an informational list, not the operator of third-party VPN endpoints, and it does not guarantee that an endpoint is accurate, available or secure.
+- **ProxyFreeOnly currently displays one Uzbekistan VPN row** (vpn584074918.opengw.net, 84.54.72.10), but that row itself says it was updated four days ago; credentials are masked and no protocol or downloadable OpenVPN profile is shown. The page header says the list refreshed five minutes ago, which is not the same as a fresh server check.
+- **FreeVPNNode displays dozens of Uzbekistan rows**, many with *.opengw.net hostnames, but its page's date banner describes SSR/V2Ray/Clash nodes while the table has no protocol column and masks credentials. Several rows show stale timestamps (8 days, 25 days and one year). It does not expose a verifiable OpenVPN profile in the visible table. Treat the list as unverified, not as a working OpenVPN feed.
 - **ProxyHub is the most useful supplied proxy-list snapshot for further controlled testing:** it showed 14 Uzbekistan entries with a common check time of 30 October 2026 15:35 UTC. The visible list includes HTTP, HTTPS and SOCKS4; some rows are explicitly marked transparent. It is not a trusted, stable VPN service.
 - No public endpoint was connected to, no traffic was sent through it, and no profile or credentials were imported during this review.
 
@@ -30,6 +31,15 @@ These websites are useful as **discovery feeds**, not as a production VPN backen
 ### Cross-check of the VPN listing
 
 A separate directory, [VPNHub's Uzbekistan VPN list](https://vpnhub.me/ru/uz-free-vpn.html), showed dozens of purported endpoints and labels the supported families as SSL, L2TP/IPsec, SSTP and OpenVPN. Its configuration download flow asks the visitor to share the page before unlocking a configuration. It does **not** list WireGuard. This is not independent proof that every listed server works or that the endpoint on ProxyFreeOnly is the same service operator.
+
+### Current OpenVPN cross-check (30 October 2026)
+
+- [Hunt VPN's Uzbekistan page](https://huntvpn.dev/vpn/uzbekistan) reports **0 alive of 1 tracked**; its probe checks every five minutes and it states that it does not operate the volunteer servers.
+- [PublicVPNList's country index](https://publicvpnlist.com/countries/) lists 47 countries with live OpenVPN endpoints, but Uzbekistan is not present in the current country index.
+- The [official VPN Gate CSV API](https://www.vpngate.net/api/iphone/) exposes country codes and Base64 OpenVPN configuration data, but the current snapshot contains no Uzbekistan record; the live VPN Gate page likewise has no Uzbek listing.
+- IP intelligence for one FreeVPNNode row (213.230.86.11) maps it to Uzbektelekom in Tashkent, but one security-data vendor marks the IP as a residential proxy and not a known VPN. This is a warning about the endpoint's classification, not proof that the server is malicious or actually runs a VPN.
+
+**Conclusion:** the public directories disagree. There is currently no independently corroborated, live Uzbekistan OpenVPN endpoint with a downloadable profile and verified protocol. Do not treat the FreeVPNNode / ProxyFreeOnly rows as confirmed OpenVPN servers.
 
 ## Why a proxy list is not a FreeRoute WireGuard server
 
@@ -54,7 +64,7 @@ A page's “anonymous” label or successful ping does not verify the operator's
 1. Keep these pages as **discovery sources only**; do not auto-import their endpoints into the release app.
 2. If we later decide to prototype a non-WireGuard mode, first add a separately labelled experimental transport and a strict allowlist/profile consent flow. Do not change the production WireGuard path.
 3. Test only non-sensitive traffic, verify the actual public exit country independently, and check DNS/IPv6 leaks. Stop immediately if the relay's operator or terms cannot be established.
-4. Continue pursuing a free VPS where we control the OS, firewall, WireGuard keys and endpoint, starting with UNICON's advertised 30-day trial after written confirmation.
+4. Continue pursuing a free VPS where we control the OS, firewall, WireGuard keys and endpoint, starting with UNICON's advertised 30-day trial after written confirmation. For a non-sensitive OpenVPN smoke test outside Russia, see the separate transport research; never use volunteer relays for sensitive accounts.
 
 ## Sources reviewed
 
@@ -66,6 +76,10 @@ A page's “anonymous” label or successful ping does not verify the operator's
 - ProxyHub: https://proxyhub.me/ru/uz-free-proxy-list.html
 - ProxyFreeOnly list, About, Terms and Privacy: https://proxyfreeonly.com/ru/free-vpn-list/uzbekistan ; https://proxyfreeonly.com/ru/about ; https://proxyfreeonly.com/terms ; https://proxyfreeonly.com/privacy-policy
 - VPNHub cross-check: https://vpnhub.me/ru/uz-free-vpn.html
+- FreeVPNNode Uzbekistan list: https://www.freevpnnode.com/free-vpn-for-uzbekistan/
+- Hunt VPN Uzbekistan and nearby-country checks: https://huntvpn.dev/vpn/uzbekistan ; https://huntvpn.dev/vpn/armenia ; https://huntvpn.dev/vpn/azerbaijan ; https://huntvpn.dev/vpn/georgia
+- PublicVPNList country index and VPN Gate API: https://publicvpnlist.com/countries/ ; https://www.vpngate.net/api/iphone/
+- IP-intelligence cross-check for one sample address: https://ipgeolocation.io/browse/ip/213.230.86.11
 - Protocol standards: https://www.rfc-editor.org/rfc/rfc9110.html#section-9.3.6 ; https://www.rfc-editor.org/rfc/rfc1928
 
 **Status:** research only. No public proxy/VPN endpoint was contacted or used. No credentials, payment method, provider account, server or client configuration was created.
