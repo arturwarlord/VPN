@@ -54,6 +54,11 @@ cmake -S "${ROOT_DIR}/app/src/main/cpp" -B "${BUILD_DIR}" -G Ninja \
 cmake --build "${BUILD_DIR}" --target freeroute_openvpn3 --parallel 2
 LIBRARY_PATH="${BUILD_DIR}/libfreeroute_openvpn3.so"
 [[ -s "${LIBRARY_PATH}" ]] || fail "Native library not produced: ${LIBRARY_PATH}"
+
+LLVM_STRIP="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+[[ -x "${LLVM_STRIP}" ]] || fail "NDK llvm-strip not found: ${LLVM_STRIP}"
+"${LLVM_STRIP}" --strip-debug "${LIBRARY_PATH}"
+
 mkdir -p "${JNI_OUTPUT_DIR}"
 install -m 0644 "${LIBRARY_PATH}" "${JNI_OUTPUT_DIR}/libfreeroute_openvpn3.so"
 file "${JNI_OUTPUT_DIR}/libfreeroute_openvpn3.so"
