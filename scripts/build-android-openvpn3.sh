@@ -57,10 +57,16 @@ swig -c++ -java -package net.openvpn.ovpn3 \
 [[ -s "${SWIG_CPP}" ]] || fail "SWIG did not generate the C++ JNI wrapper"
 JNI_WRAPPER_JAVA="${SWIG_JAVA_DIR}/ovpncliJNI.java"
 [[ -s "${JNI_WRAPPER_JAVA}" ]] || fail "SWIG did not generate ovpncliJNI.java"
-if ! grep -q 'System.loadLibrary("freeroute_openvpn3")' "${JNI_WRAPPER_JAVA}"; then
-  sed -i 's/System.loadLibrary("ovpncli")/System.loadLibrary("freeroute_openvpn3")/' "${JNI_WRAPPER_JAVA}"
-fi
-grep -q 'System.loadLibrary("freeroute_openvpn3")' "${JNI_WRAPPER_JAVA}" || fail "SWIG JNI Java class does not load the FreeRoute native library"
+JNI_LOADER_COUNT=0
+while IFS= read -r -d '' JAVA_FILE; do
+  if grep -q 'System.loadLibrary(' "${JAVA_FILE}"; then
+    sed -E -i 's/System\.loadLibrary\("[^"]+"\)/System.loadLibrary("freeroute_openvpn3")/' "${JAVA_FILE}"
+    grep -q 'System.loadLibrary("freeroute_openvpn3")' "${JAVA_FILE}" || fail "Could not redirect SWIG native loader in ${JAVA_FILE}"
+    JNI_LOADER_COUNT=$((JNI_LOADER_COUNT + 1))
+  fi
+done < <(find "${SWIG_JAVA_DIR}" -type f -name '*.java' -print0)
+[[ "${JNI_LOADER_COUNT}" -ge 1 ]] || fail "No generated SWIG Java class contains a native library loader"
+echo "Redirected ${JNI_LOADER_COUNT} SWIG Java native loader(s) to libfreeroute_openvpn3.so"
 
 cmake -S "${ROOT_DIR}/app/src/main/cpp" -B "${BUILD_DIR}" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
