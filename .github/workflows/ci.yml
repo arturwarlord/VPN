@@ -23,6 +23,7 @@ jobs:
           bash -n scripts/diagnose-wireguard-server.sh
           bash -n scripts/preflight-wireguard-host.sh
           bash -n scripts/check-workflow-shell.sh
+          bash -n scripts/build-android-openvpn3.sh
           bash -n tests/validate-endpoint.sh
           bash -n tests/validate-firewall-policy.sh
           bash -n tests/validate-deploy-safety.sh
@@ -85,6 +86,18 @@ jobs:
           test -s app/build.gradle.kts
           test -s app/src/main/AndroidManifest.xml
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3Core.kt
+          test -s app/src/main/cpp/CMakeLists.txt
+          test -s app/src/main/cpp/native_bridge.cpp
+          test -s app/src/main/assets/OpenVPN3-MPL-2.0.txt
+          test -s third_party/licenses/OpenVPN3-MPL-2.0.txt
+          test -s scripts/build-android-openvpn3.sh
+          test -s docs/ANDROID_OPENVPN3_PHASE1.md
+          grep -q '0abc8313b8fe5f63dbebc10d53094952957845d9' scripts/build-android-openvpn3.sh
+          grep -q 'MPL 2.0' app/src/main/assets/THIRD_PARTY_NOTICES.txt
+          grep -q 'arm64-v8a' app/build.gradle.kts
+          grep -q 'nativePlatform' app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3Core.kt
+
           grep -q 'https://ipwho.is/' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           grep -q 'getStatistics(tunnel)' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           grep -q 'latestHandshakeEpochMillis()' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
