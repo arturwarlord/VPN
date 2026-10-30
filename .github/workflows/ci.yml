@@ -101,6 +101,11 @@ jobs:
           grep -q 'MAX_PROFILE_BYTES = 256 \* 1024' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnProfileStore.kt
           grep -q 'CodingErrorAction.REPORT' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnProfileStore.kt
           test -s docs/ANDROID_OPENVPN_PROFILE_IMPORT_PHASE7.md
+          grep -q 'ACTION_EVALUATE_PROFILE' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'session.evaluateProfile(profile)' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'readText(file: File)' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnProfileStore.kt
+          grep -q 'requestOpenVpnProfileEvaluation(imported.absolutePath)' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          test -s docs/ANDROID_OPENVPN_PROFILE_EVALUATION_PHASE8.md
           grep -q 'POST_NOTIFICATIONS' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           grep -q 'startForegroundService(intent)' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
