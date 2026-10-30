@@ -53,7 +53,7 @@ class OpenVpnVpnService : VpnService() {
         createNotificationChannel()
         val notification = buildNotification()
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= 34) {
                 startForeground(
                     NOTIFICATION_ID,
                     notification,
