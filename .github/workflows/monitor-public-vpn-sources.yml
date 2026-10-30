@@ -51,7 +51,7 @@ jobs:
               "The run artifact contains the source snapshot: " + context.serverUrl + "/" + owner + "/" + repo + "/actions/runs/" + context.runId,
               "",
               "No profile was downloaded and no VPN endpoint was contacted by the monitor."
-            ].join("\\n");
+            ].join("\n");
             if (!found) {
               await github.rest.issues.create({ owner, repo, title, body });
             }
