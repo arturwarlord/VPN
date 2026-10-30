@@ -1,0 +1,57 @@
+name: Monitor public Uzbekistan VPN sources
+
+on:
+  schedule:
+    - cron: "23 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run read-only source check
+        id: scan
+        run: python scripts/check_public_vpn_sources.py --output public-vpn-source-report.json
+
+      - name: Upload source report
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-vpn-source-report
+          path: public-vpn-source-report.json
+          retention-days: 30
+
+      - name: Open review issue when a potential Uzbek endpoint appears
+        if: steps.scan.outputs.candidate_detected == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Potential Uzbekistan OpenVPN endpoint detected";
+            const { owner, repo } = context.repo;
+            const existing = await github.rest.issues.listForRepo({
+              owner, repo, state: "open", per_page: 100
+            });
+            const found = existing.data.find(item => item.title === title && !item.pull_request);
+            const body = [
+              "A scheduled read-only source check found a potential Uzbekistan OpenVPN listing.",
+              "",
+              "This is only a directory signal. Do not import or connect to the endpoint before checking the profile, operator, protocol, DNS/IPv6 behavior and acceptable-use terms.",
+              "",
+              "The run artifact contains the source snapshot: " + context.serverUrl + "/" + owner + "/" + repo + "/actions/runs/" + context.runId,
+              "",
+              "No profile was downloaded and no VPN endpoint was contacted by the monitor."
+            ].join("\n");
+            if (!found) {
+              await github.rest.issues.create({ owner, repo, title, body });
+            }

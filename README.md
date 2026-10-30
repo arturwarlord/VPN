@@ -113,6 +113,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `docs/UZBEKISTAN_HOST_RESEARCH.md` — Uzbekistan VPS providers, free trials, promo credits and WireGuard policy checks.
 - `docs/PUBLIC_UZBEK_PROXY_VPN_LISTS.md` — review of public Uzbekistan proxy/VPN lists, endpoint reliability, protocol compatibility and security.
 - `docs/OPENVPN_TRANSPORT_RESEARCH.md` — live OpenVPN availability outside Russia, Uzbek endpoint verification and cross-platform integration/licensing feasibility.
+- `scripts/check_public_vpn_sources.py` and `.github/workflows/monitor-public-vpn-sources.yml` — daily read-only checks for newly available public Uzbekistan VPN listings.
 - `docs/UZBEKISTAN_PROVIDER_SUPPORT_QUESTIONS.md` — copy-ready Russian/English questions for UNICON and ServerPlus support.
 - `docs/CLIENT_SMOKE_TEST.md` — safe temporary third-party WireGuard profile test before our own server exists.
 - `scripts/setup-wireguard.sh` — server bootstrap script.
