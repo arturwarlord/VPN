@@ -43,6 +43,43 @@ Java_com_arturwarlord_vpnclient_OpenVpn3NativeSession_nativeCreate(
     }
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_arturwarlord_vpnclient_OpenVpn3NativeSession_nativeEvaluateProfile(
+    JNIEnv* env, jobject, jlong handle, jstring profileText)
+{
+    auto* client = reinterpret_cast<FreeRouteOpenVpnClient*>(handle);
+    if (client == nullptr || profileText == nullptr) return JNI_FALSE;
+
+    const jsize profileLength = env->GetStringUTFLength(profileText);
+    const long maximumLength = openvpn::ClientAPI::OpenVPNClientHelper::max_profile_size();
+    if (profileLength <= 0 || maximumLength <= 0 || profileLength > maximumLength) {
+        return JNI_FALSE;
+    }
+
+    const char* chars = env->GetStringUTFChars(profileText, nullptr);
+    if (chars == nullptr || env->ExceptionCheck()) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        return JNI_FALSE;
+    }
+
+    bool accepted = false;
+    try {
+        openvpn::ClientAPI::Config config;
+        config.content.assign(chars, static_cast<size_t>(profileLength));
+        const openvpn::ClientAPI::EvalConfig evaluation = client->eval_config(config);
+        accepted = !evaluation.error;
+    } catch (...) {
+        accepted = false;
+    }
+
+    env->ReleaseStringUTFChars(profileText, chars);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return JNI_FALSE;
+    }
+    return accepted ? JNI_TRUE : JNI_FALSE;
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_arturwarlord_vpnclient_OpenVpn3NativeSession_nativeDestroy(
     JNIEnv*, jobject, jlong handle)
