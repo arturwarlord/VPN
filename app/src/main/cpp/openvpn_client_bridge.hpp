@@ -60,6 +60,7 @@ private:
     jobject vpnService_;
     jmethodID protectSocketMethod_;
     jmethodID establishTunMethod_;
+    jmethodID nativeEventMethod_;
     std::mutex lifecycleMutex_;
     std::thread worker_;
     std::atomic<bool> workerRunning_{false};
