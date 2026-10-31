@@ -194,6 +194,32 @@ class OpenVpnVpnService : VpnService() {
     }
 
     /**
+     * Receives only the OpenVPN event token and error flags from the native worker.
+     * Server-provided event details and native log text are deliberately not forwarded.
+     */
+    @Suppress("unused")
+    fun onNativeEvent(name: String, error: Boolean, fatal: Boolean) {
+        if (!foregroundReady) return
+
+        val status = when {
+            fatal -> "OpenVPN остановил подключение из-за ошибки"
+            error -> "Ошибка OpenVPN; подробности не сохранены"
+            else -> when (name.uppercase()) {
+                "RESOLVE" -> "Определяем адрес VPN-сервера"
+                "TCP_CONNECT", "UDP_CONNECT" -> "Подключаемся к VPN-серверу"
+                "WAIT" -> "Ожидаем ответ VPN-сервера"
+                "AUTH" -> "Проверяем авторизацию OpenVPN"
+                "GET_CONFIG", "ASSIGN_IP", "ADD_ROUTES" -> "Настраиваем VPN-туннель"
+                "CONNECTED" -> "OpenVPN установил соединение; трафик ещё не проверен"
+                "RECONNECTING" -> "OpenVPN переподключается"
+                "DISCONNECTED", "EXITING" -> "OpenVPN отключён"
+                else -> "OpenVPN обновляет состояние"
+            }
+        }
+        updateNotification(status)
+    }
+
+    /**
      * Called by the native TunBuilder callback after OpenVPN has supplied the
      * complete interface configuration. Returns a detached fd, or -1.
      */
