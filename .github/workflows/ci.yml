@@ -108,6 +108,11 @@ jobs:
           test -s docs/ANDROID_OPENVPN_PROFILE_EVALUATION_PHASE8.md
           grep -q 'POST_NOTIFICATIONS' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           grep -q 'startForegroundService(intent)' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'onNativeEvent' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'nativeEventMethod_' app/src/main/cpp/openvpn_client_bridge.hpp
+          grep -q 'GetMethodID(cls, "onNativeEvent"' app/src/main/cpp/openvpn_client_bridge.cpp
+          grep -q 'e.fatal' app/src/main/cpp/openvpn_client_bridge.cpp
+          grep -q 'CONNECTED' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3Core.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3SwigApi.kt
