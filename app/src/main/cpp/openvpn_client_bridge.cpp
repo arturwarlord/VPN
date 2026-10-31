@@ -17,7 +17,7 @@ void wipeString(std::string& value)
 }
 
 FreeRouteOpenVpnClient::FreeRouteOpenVpnClient(JavaVM* vm, JNIEnv* env, jobject vpnService)
-    : vm_(vm), vpnService_(nullptr), protectSocketMethod_(nullptr), establishTunMethod_(nullptr),
+    : vm_(vm), vpnService_(nullptr), protectSocketMethod_(nullptr), establishTunMethod_(nullptr), nativeEventMethod_(nullptr),
       mtu_(1500), sessionName_("FreeRoute OpenVPN"), builderReady_(false)
 {
     if (!vm_ || !env || !vpnService) throw std::invalid_argument("OpenVPN Android service bridge is not initialized");
@@ -28,9 +28,10 @@ FreeRouteOpenVpnClient::FreeRouteOpenVpnClient(JavaVM* vm, JNIEnv* env, jobject 
         protectSocketMethod_ = env->GetMethodID(cls, "protectSocketDescriptor", "(I)Z");
         establishTunMethod_ = env->GetMethodID(cls, "establishTun",
             "([Ljava/lang/String;[I[Ljava/lang/String;[I[Ljava/lang/String;ILjava/lang/String;)I");
+        nativeEventMethod_ = env->GetMethodID(cls, "onNativeEvent", "(Ljava/lang/String;ZZ)V");
         env->DeleteLocalRef(cls);
     }
-    if (!protectSocketMethod_ || !establishTunMethod_ || env->ExceptionCheck()) {
+    if (!protectSocketMethod_ || !establishTunMethod_ || !nativeEventMethod_ || env->ExceptionCheck()) {
         if (env->ExceptionCheck()) env->ExceptionClear();
         env->DeleteGlobalRef(vpnService_); vpnService_ = nullptr;
         throw std::runtime_error("OpenVPN VpnService bridge methods are unavailable");
@@ -105,7 +106,31 @@ JNIEnv* FreeRouteOpenVpnClient::acquireEnv(bool& attached) const
 }
 void FreeRouteOpenVpnClient::releaseEnv(bool attached) const { if (attached && vm_) vm_->DetachCurrentThread(); }
 
-void FreeRouteOpenVpnClient::event(const openvpn::ClientAPI::Event& e) { (void)e; }
+void FreeRouteOpenVpnClient::event(const openvpn::ClientAPI::Event& e)
+{
+    bool attached = false;
+    JNIEnv* env = acquireEnv(attached);
+    if (!env || !vpnService_ || !nativeEventMethod_) {
+        releaseEnv(attached);
+        return;
+    }
+
+    // Event names are protocol state tokens. Never forward event.info, which may
+    // contain server-supplied text or connection details.
+    jstring name = env->NewStringUTF(e.name.c_str());
+    if (name && !env->ExceptionCheck()) {
+        env->CallVoidMethod(
+            vpnService_,
+            nativeEventMethod_,
+            name,
+            static_cast<jboolean>(e.error ? JNI_TRUE : JNI_FALSE),
+            static_cast<jboolean>(e.fatal ? JNI_TRUE : JNI_FALSE)
+        );
+    }
+    if (env->ExceptionCheck()) env->ExceptionClear();
+    if (name) env->DeleteLocalRef(name);
+    releaseEnv(attached);
+}
 void FreeRouteOpenVpnClient::acc_event(const openvpn::ClientAPI::AppCustomControlMessageEvent& e) { (void)e; }
 void FreeRouteOpenVpnClient::log(const openvpn::ClientAPI::LogInfo& e) { (void)e; }
 bool FreeRouteOpenVpnClient::pause_on_connection_timeout() { return false; }
