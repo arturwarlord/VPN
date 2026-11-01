@@ -11,8 +11,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 include("${OPENVPN3_SOURCE_DIR}/cmake/findcoredeps.cmake")
 set(OPENVPN_PLAT android)
-add_library(freeroute_openvpn3 SHARED native_bridge.cpp "${OPENVPN3_SOURCE_DIR}/client/ovpncli.cpp")
-target_include_directories(freeroute_openvpn3 PRIVATE "${OPENVPN3_SOURCE_DIR}/client")
+if(NOT DEFINED OPENVPN3_SWIG_WRAPPER OR NOT EXISTS "${OPENVPN3_SWIG_WRAPPER}")
+  message(FATAL_ERROR "OPENVPN3_SWIG_WRAPPER must point to the generated SWIG Java binding.")
+endif()
+add_library(freeroute_openvpn3 SHARED
+  native_bridge.cpp
+  openvpn_client_bridge.cpp
+  "${OPENVPN3_SOURCE_DIR}/client/ovpncli.cpp"
+  "${OPENVPN3_SWIG_WRAPPER}"
+)
+set_source_files_properties("${OPENVPN3_SWIG_WRAPPER}" PROPERTIES COMPILE_DEFINITIONS "SWIGJAVA")
+target_include_directories(freeroute_openvpn3 PRIVATE "${OPENVPN3_SOURCE_DIR}/client" "${OPENVPN3_SOURCE_DIR}")
 add_core_dependencies(freeroute_openvpn3)
 # Android Bionic exposes pthread symbols through libc, not a separate libpthread.so.
 get_target_property(_freeroute_openvpn3_links freeroute_openvpn3 LINK_LIBRARIES)

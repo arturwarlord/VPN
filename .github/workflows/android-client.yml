@@ -38,6 +38,10 @@ jobs:
         uses: android-actions/setup-android@v4
         with:
           packages: "platform-tools"
+      - name: Install SWIG Java binding generator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y swig
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - name: Set up vcpkg at the pinned 2026.10.16 release
@@ -47,6 +51,8 @@ jobs:
           git clone --depth 1 --branch 2026.10.16 https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
           "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=$VCPKG_ROOT" >> "$GITHUB_ENV"
+      - name: Verify SWIG Java wrapper generation prerequisites
+        run: swig -version
       - name: Build OpenVPN 3 Core native library for ARM64
         run: bash scripts/build-android-openvpn3.sh
       - name: Set up Gradle

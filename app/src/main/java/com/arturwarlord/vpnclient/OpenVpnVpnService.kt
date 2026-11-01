@@ -1,0 +1,398 @@
+package com.arturwarlord.vpnclient
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.net.VpnService
+import android.os.Build
+import android.os.IBinder
+import android.os.ParcelFileDescriptor
+import android.util.Log
+import java.io.File
+
+/**
+ * Android service boundary for OpenVPN 3.
+ *
+ * Owns the OpenVPN service lifecycle and its optional native session.
+ * The internal development connect action is not exposed as verified VPN UI.
+ */
+class OpenVpnVpnService : VpnService() {
+    companion object {
+        private const val TAG = "FreeRouteOpenVPN"
+        private const val CHANNEL_ID = "freeroute_openvpn"
+        private const val NOTIFICATION_ID = 3201
+
+        const val ACTION_START_FOREGROUND = "com.arturwarlord.vpnclient.OPENVPN_START_FOREGROUND"
+        const val ACTION_STOP = "com.arturwarlord.vpnclient.OPENVPN_STOP"
+        const val ACTION_EVALUATE_PROFILE = "com.arturwarlord.vpnclient.OPENVPN_EVALUATE_PROFILE"
+        const val ACTION_CONNECT_PROFILE = "com.arturwarlord.vpnclient.OPENVPN_CONNECT_PROFILE"
+        const val EXTRA_PROFILE_PATH = "com.arturwarlord.vpnclient.EXTRA_PROFILE_PATH"
+    }
+
+    @Volatile private var foregroundReady = false
+    @Volatile private var evaluationThread: Thread? = null
+    @Volatile private var connectionThread: Thread? = null
+    private val sessionLock = Any()
+    @Volatile private var nativeSession: OpenVpn3NativeSession? = null
+
+    override fun onBind(intent: Intent?): IBinder? = super.onBind(intent)
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_START_FOREGROUND -> startForegroundSession()
+            ACTION_CONNECT_PROFILE -> {
+                val path = intent.getStringExtra(EXTRA_PROFILE_PATH)
+                if (path.isNullOrBlank()) {
+                    Log.w(TAG, "Rejected OpenVPN connect without a profile path")
+                    stopSelf(startId)
+                } else if (startForegroundSession()) {
+                    connectProfileInBackground(path, startId)
+                }
+            }
+            ACTION_EVALUATE_PROFILE -> {
+                val path = intent.getStringExtra(EXTRA_PROFILE_PATH)
+                if (path.isNullOrBlank()) {
+                    Log.w(TAG, "Rejected profile evaluation without a path")
+                    stopSelf(startId)
+                } else if (startForegroundSession()) {
+                    evaluateProfileInBackground(path, startId)
+                }
+            }
+            ACTION_STOP -> stopForegroundSession()
+            else -> {
+                Log.w(TAG, "Ignored unsupported service action")
+                stopSelf(startId)
+            }
+        }
+        return START_NOT_STICKY
+    }
+
+    private fun startForegroundSession(): Boolean {
+        // Consent must be granted by the Activity before the service is started.
+        if (VpnService.prepare(this) != null) {
+            Log.w(TAG, "VPN consent is missing; refusing to start foreground session")
+            stopSelf()
+            return false
+        }
+
+        createNotificationChannel()
+        val notification = buildNotification()
+        try {
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            foregroundReady = true
+            return true
+        } catch (error: Exception) {
+            Log.e(TAG, "Unable to enter foreground state", error)
+            foregroundReady = false
+            stopSelf()
+            return false
+        }
+    }
+
+    private fun buildNotification(status: String = "Служба VPN активна; подключение ещё не запущено"): Notification {
+        val openAppIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val stopIntent = PendingIntent.getService(
+            this,
+            1,
+            Intent(this, OpenVpnVpnService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return Notification.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setContentTitle("FreeRoute · OpenVPN")
+            .setContentText(status)
+            .setContentIntent(openAppIntent)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .addAction(
+                Notification.Action.Builder(
+                    android.R.drawable.ic_media_pause,
+                    "Остановить",
+                    stopIntent
+                ).build()
+            )
+            .build()
+    }
+
+    private fun evaluateProfileInBackground(path: String, startId: Int) {
+        if (evaluationThread?.isAlive == true) {
+            updateNotification("Проверка профиля уже выполняется")
+            return
+        }
+        val worker = Thread({
+            var accepted = false
+            try {
+                val profile = OpenVpnProfileStore(this).readText(File(path))
+                val session = OpenVpn3NativeSession(this)
+                try {
+                    accepted = session.evaluateProfile(profile)
+                } finally {
+                    session.close()
+                }
+            } catch (error: Exception) {
+                // Do not log profile text, credentials, or parser-provided details.
+                Log.w(TAG, "OpenVPN profile evaluation failed (" + error.javaClass.simpleName + ")")
+            }
+            if (!Thread.currentThread().isInterrupted && foregroundReady) {
+                updateNotification(
+                    if (accepted) "Профиль принят OpenVPN 3 Core; сервер не проверен"
+                    else "OpenVPN 3 Core не принял профиль"
+                )
+            }
+            evaluationThread = null
+            if (!foregroundReady) stopSelf(startId)
+        }, "FreeRoute-OpenVPN-profile-check")
+        evaluationThread = worker
+        worker.start()
+    }
+
+    /**
+     * Starts the native worker only after Android VPN consent and foreground
+     * service startup. This internal action currently supports autologin
+     * profiles only; credential-required and unsupported profiles fail closed.
+     */
+    private fun connectProfileInBackground(path: String, startId: Int) {
+        if (connectionThread?.isAlive == true || nativeSession != null) {
+            updateNotification("OpenVPN уже выполняет подключение или работает")
+            return
+        }
+
+        val worker = Thread({
+            var session: OpenVpn3NativeSession? = null
+            try {
+                val profile = OpenVpnProfileStore(this).readText(File(path))
+                val activeSession = OpenVpn3NativeSession(this)
+                session = activeSession
+                synchronized(sessionLock) {
+                    if (!foregroundReady || nativeSession != null) {
+                        activeSession.close()
+                        return@Thread
+                    }
+                    nativeSession = activeSession
+                }
+
+                val accepted = synchronized(sessionLock) {
+                    foregroundReady && nativeSession === activeSession && activeSession.evaluateProfile(profile)
+                }
+                if (!accepted) {
+                    releaseNativeSession(activeSession)
+                    if (foregroundReady) updateNotification("OpenVPN 3 Core отклонил профиль")
+                    return@Thread
+                }
+
+                val started = synchronized(sessionLock) {
+                    foregroundReady && nativeSession === activeSession && activeSession.start()
+                }
+                if (!started) {
+                    releaseNativeSession(activeSession)
+                    if (foregroundReady) {
+                        updateNotification("Профиль требует логин/пароль или содержит неподдерживаемые настройки")
+                    }
+                    return@Thread
+                }
+
+                updateNotification("Нативный OpenVPN запущен; ожидаем ответ сервера")
+            } catch (error: Exception) {
+                session?.let { releaseNativeSession(it) }
+                Log.w(TAG, "OpenVPN connection startup failed (" + error.javaClass.simpleName + ")")
+                if (foregroundReady) updateNotification("Не удалось запустить OpenVPN")
+            } finally {
+                connectionThread = null
+                if (!foregroundReady && nativeSession == null) stopSelf(startId)
+            }
+        }, "FreeRoute-OpenVPN-connect")
+        connectionThread = worker
+        worker.start()
+    }
+
+    private fun releaseNativeSession(session: OpenVpn3NativeSession) {
+        synchronized(sessionLock) {
+            if (nativeSession === session) nativeSession = null
+        }
+        try {
+            session.stop()
+        } finally {
+            session.close()
+        }
+    }
+
+    private fun updateNotification(status: String) {
+        try {
+            getSystemService(NotificationManager::class.java)
+                .notify(NOTIFICATION_ID, buildNotification(status))
+        } catch (_: Exception) {
+            Log.w(TAG, "Unable to update profile evaluation notification")
+        }
+    }
+
+    private fun createNotificationChannel() {
+        val manager = getSystemService(NotificationManager::class.java)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "FreeRoute OpenVPN",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Постоянное уведомление службы OpenVPN"
+            setShowBadge(false)
+        }
+        manager.createNotificationChannel(channel)
+    }
+
+    private fun stopForegroundSession() {
+        foregroundReady = false
+        evaluationThread?.interrupt()
+        connectionThread?.interrupt()
+        val session = synchronized(sessionLock) {
+            nativeSession.also { nativeSession = null }
+        }
+        if (session == null) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return
+        }
+
+        updateNotification("Останавливаем OpenVPN…")
+        Thread({
+            try {
+                session.stop()
+            } catch (error: Exception) {
+                Log.w(TAG, "OpenVPN stop request failed (" + error.javaClass.simpleName + ")")
+            } finally {
+                session.close()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }, "FreeRoute-OpenVPN-stop").start()
+    }
+
+    override fun onRevoke() {
+        stopForegroundSession()
+        super.onRevoke()
+    }
+
+    override fun onDestroy() {
+        foregroundReady = false
+        evaluationThread?.interrupt()
+        connectionThread?.interrupt()
+        val session = synchronized(sessionLock) {
+            nativeSession.also { nativeSession = null }
+        }
+        if (session != null) {
+            try {
+                session.stop()
+            } catch (error: Exception) {
+                Log.w(TAG, "OpenVPN teardown failed (" + error.javaClass.simpleName + ")")
+            } finally {
+                session.close()
+            }
+        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        super.onDestroy()
+    }
+
+    /**
+     * Receives only the OpenVPN event token and error flags from the native worker.
+     * Server-provided event details and native log text are deliberately not forwarded.
+     */
+    @Suppress("unused")
+    fun onNativeEvent(name: String, error: Boolean, fatal: Boolean) {
+        if (!foregroundReady) return
+
+        val status = when {
+            fatal -> "OpenVPN остановил подключение из-за ошибки"
+            error -> "Ошибка OpenVPN; подробности не сохранены"
+            else -> when (name.uppercase()) {
+                "RESOLVE" -> "Определяем адрес VPN-сервера"
+                "TCP_CONNECT", "UDP_CONNECT" -> "Подключаемся к VPN-серверу"
+                "WAIT" -> "Ожидаем ответ VPN-сервера"
+                "AUTH" -> "Проверяем авторизацию OpenVPN"
+                "GET_CONFIG", "ASSIGN_IP", "ADD_ROUTES" -> "Настраиваем VPN-туннель"
+                "CONNECTED" -> "OpenVPN установил соединение; трафик ещё не проверен"
+                "RECONNECTING" -> "OpenVPN переподключается"
+                "DISCONNECTED", "EXITING" -> "OpenVPN отключён"
+                else -> "OpenVPN обновляет состояние"
+            }
+        }
+        updateNotification(status)
+    }
+
+    /**
+     * Called by the native TunBuilder callback after OpenVPN has supplied the
+     * complete interface configuration. Returns a detached fd, or -1.
+     */
+    @Suppress("unused")
+    fun establishTun(
+        addresses: Array<String>,
+        addressPrefixes: IntArray,
+        routes: Array<String>,
+        routePrefixes: IntArray,
+        dnsServers: Array<String>,
+        mtu: Int,
+        sessionName: String
+    ): Int {
+        if (addresses.isEmpty() || addresses.size != addressPrefixes.size ||
+            routes.size != routePrefixes.size || mtu !in 576..9000
+        ) {
+            Log.e(TAG, "Rejected invalid TUN configuration")
+            return -1
+        }
+
+        return try {
+            val builder = Builder()
+                .setSession(sessionName.take(64).ifBlank { "FreeRoute OpenVPN" })
+                .setMtu(mtu)
+
+            addresses.forEachIndexed { index, address ->
+                val prefix = addressPrefixes[index]
+                if (prefix !in 0..(if (address.contains(':')) 128 else 32)) {
+                    throw IllegalArgumentException("Invalid interface prefix")
+                }
+                builder.addAddress(address, prefix)
+            }
+
+            routes.forEachIndexed { index, route ->
+                val prefix = routePrefixes[index]
+                if (prefix !in 0..(if (route.contains(':')) 128 else 32)) {
+                    throw IllegalArgumentException("Invalid route prefix")
+                }
+                builder.addRoute(route, prefix)
+            }
+
+            dnsServers.forEach { dns ->
+                if (dns.isNotBlank()) builder.addDnsServer(dns)
+            }
+
+            val descriptor = builder.establish() ?: return -1
+            descriptor.detachFd()
+        } catch (error: Exception) {
+            Log.e(TAG, "Unable to establish Android TUN interface", error)
+            -1
+        }
+    }
+
+    /** OpenVPN transport sockets must bypass this VPN to avoid routing loops. */
+    @Suppress("unused")
+    fun protectSocketDescriptor(fd: Int): Boolean {
+        if (fd < 0) return false
+        return protect(fd)
+    }
+}

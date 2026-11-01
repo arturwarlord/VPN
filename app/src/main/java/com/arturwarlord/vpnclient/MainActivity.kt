@@ -1,5 +1,6 @@
 package com.arturwarlord.vpnclient
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
@@ -9,9 +10,11 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.VpnService
 import android.os.Bundle
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
+import android.content.pm.PackageManager
 import android.view.Gravity
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -32,7 +35,12 @@ import org.json.JSONObject
 
 class MainActivity : Activity() {
     private val pickProfileRequest = 4101
+    private val pickOpenVpnProfileRequest = 4105
     private val vpnConsentRequest = 4102
+    private val openVpnServiceConsentRequest = 4103
+    private val notificationPermissionRequest = 4104
+    private var pendingOpenVpnServiceStart = false
+    private var pendingOpenVpnProfilePath: String? = null
     private var backend: GoBackend? = null
     private var profile: Config? = null
     private var isConnected = false
@@ -59,6 +67,7 @@ class MainActivity : Activity() {
     private lateinit var disconnectButton: Button
     private lateinit var checkCountryButton: Button
     private lateinit var openVpnCoreButton: Button
+    private lateinit var openVpnProfileStatusView: TextView
 
     private data class SavedProfile(
         val fileName: String,
@@ -171,6 +180,26 @@ class MainActivity : Activity() {
         }
         root.addView(importButton, buttonLayout())
 
+        val importOpenVpnButton = makeButton("Импортировать профиль OpenVPN (.ovpn)", Color.rgb(92, 75, 130))
+        importOpenVpnButton.setOnClickListener {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+            }
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, pickOpenVpnProfileRequest)
+        }
+        root.addView(importOpenVpnButton, buttonLayout())
+
+        openVpnProfileStatusView = TextView(this).apply {
+            textSize = 12f
+            setTextColor(Color.rgb(170, 184, 210))
+            gravity = Gravity.CENTER
+            setPadding(dp(4), dp(8), dp(4), dp(4))
+        }
+        root.addView(openVpnProfileStatusView, matchWidthWrapHeight())
+        refreshOpenVpnProfileStatus()
+
         connectButton = makeButton("Подключить VPN", Color.rgb(39, 142, 101))
         connectButton.setOnClickListener { requestConnection() }
         root.addView(connectButton, buttonLayout())
@@ -186,6 +215,13 @@ class MainActivity : Activity() {
         openVpnCoreButton = makeButton("Диагностика OpenVPN Core", Color.rgb(70, 85, 120))
         openVpnCoreButton.setOnClickListener { diagnoseOpenVpnCore() }
         root.addView(openVpnCoreButton, buttonLayout())
+
+        val openVpnServiceTestButton = makeButton(
+            "Тест службы OpenVPN (без подключения)",
+            Color.rgb(92, 75, 130)
+        )
+        openVpnServiceTestButton.setOnClickListener { requestOpenVpnServiceSmokeTest() }
+        root.addView(openVpnServiceTestButton, buttonLayout())
 
         val licensesButton = makeButton("О лицензиях", Color.rgb(36, 48, 71))
         licensesButton.setOnClickListener { showLicenses() }
@@ -286,7 +322,16 @@ class MainActivity : Activity() {
     private fun profilesDirectory(): File =
         File(filesDir, "profiles").apply { mkdirs() }
 
-    private fun displayNameFor(uri: android.net.Uri): String {
+    private fun refreshOpenVpnProfileStatus() {
+        val count = OpenVpnProfileStore(this).list().size
+        openVpnProfileStatusView.text = if (count == 0) {
+            "OpenVPN: .ovpn профиль ещё не импортирован"
+        } else {
+            "OpenVPN: сохранено профилей — $count. Синтаксис и подключение ещё не проверены."
+        }
+    }
+
+    private fun displayNameFor(uri: android.net.Uri, fallbackExtension: String = "conf"): String {
         val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
         contentResolver.query(uri, projection, null, null, null)?.use { cursor: Cursor ->
             val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
@@ -294,7 +339,7 @@ class MainActivity : Activity() {
                 cursor.getString(column)?.let { return it }
             }
         }
-        return "profile-${System.currentTimeMillis()}.conf"
+        return "profile-${System.currentTimeMillis()}.$fallbackExtension"
     }
 
     private fun uniqueProfileFile(displayName: String): File {
@@ -318,7 +363,33 @@ class MainActivity : Activity() {
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == pickProfileRequest && resultCode == RESULT_OK) {
+        if (requestCode == pickOpenVpnProfileRequest && resultCode == RESULT_OK) {
+            val uri = data?.data ?: return
+            try {
+                val imported = OpenVpnProfileStore(this).import(
+                    contentResolver.openInputStream(uri)
+                        ?: throw IllegalArgumentException("Не удалось открыть выбранный файл."),
+                    displayNameFor(uri, "ovpn")
+                )
+                refreshOpenVpnProfileStatus()
+                Toast.makeText(
+                    this,
+                    "OpenVPN-профиль сохранён локально: " + imported.name + ". Подключение пока отключено.",
+                    Toast.LENGTH_LONG
+                ).show()
+                AlertDialog.Builder(this)
+                    .setTitle("Профиль OpenVPN импортирован")
+                    .setMessage("Проверить его конфигурацию локальным ядром OpenVPN 3? Это не подключает сервер и не меняет маршруты.")
+                    .setNegativeButton("Позже", null)
+                    .setPositiveButton("Проверить") { _, _ ->
+                        requestOpenVpnProfileEvaluation(imported.absolutePath)
+                    }
+                    .show()
+            } catch (error: Exception) {
+                val message = error.message ?: "Неподдерживаемый файл."
+                Toast.makeText(this, "Не удалось импортировать .ovpn: " + message, Toast.LENGTH_LONG).show()
+            }
+        } else if (requestCode == pickProfileRequest && resultCode == RESULT_OK) {
             val uri = data?.data ?: return
             try {
                 val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -335,6 +406,114 @@ class MainActivity : Activity() {
             startTunnel()
         } else if (requestCode == vpnConsentRequest) {
             renderState("Подключение отменено")
+        } else if (requestCode == openVpnServiceConsentRequest) {
+            pendingOpenVpnServiceStart = false
+            if (resultCode == RESULT_OK) {
+                startPendingOpenVpnServiceTask()
+            } else {
+                pendingOpenVpnProfilePath = null
+                Toast.makeText(this, "Разрешение VPN не предоставлено; служба не запущена.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == notificationPermissionRequest && pendingOpenVpnServiceStart) {
+            // Android permits a foreground service when notification permission is denied,
+            // but may omit its notification from the drawer. Continue only with explicit tap.
+            continueOpenVpnServiceConsent()
+        }
+    }
+
+    private fun requestOpenVpnProfileEvaluation(profilePath: String) {
+        if (isConnected || isBusy) {
+            Toast.makeText(this, "Сначала отключи WireGuard перед проверкой OpenVPN.", Toast.LENGTH_LONG).show()
+            return
+        }
+        pendingOpenVpnProfilePath = profilePath
+        pendingOpenVpnServiceStart = true
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationPermissionRequest)
+        } else {
+            continueOpenVpnServiceConsent()
+        }
+    }
+
+    private fun requestOpenVpnServiceSmokeTest() {
+        if (isConnected || isBusy) {
+            Toast.makeText(this, "Сначала отключи WireGuard перед проверкой службы OpenVPN.", Toast.LENGTH_LONG).show()
+            return
+        }
+        pendingOpenVpnProfilePath = null
+        pendingOpenVpnServiceStart = true
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationPermissionRequest)
+        } else {
+            continueOpenVpnServiceConsent()
+        }
+    }
+
+    private fun continueOpenVpnServiceConsent() {
+        val consent = VpnService.prepare(this)
+        if (consent != null) {
+            @Suppress("DEPRECATION")
+            startActivityForResult(consent, openVpnServiceConsentRequest)
+        } else {
+            pendingOpenVpnServiceStart = false
+            startPendingOpenVpnServiceTask()
+        }
+    }
+
+    private fun startPendingOpenVpnServiceTask() {
+        val profilePath = pendingOpenVpnProfilePath
+        pendingOpenVpnProfilePath = null
+        if (profilePath != null) {
+            startOpenVpnProfileEvaluation(profilePath)
+        } else {
+            startOpenVpnServiceSmokeTest()
+        }
+    }
+
+    private fun startOpenVpnProfileEvaluation(profilePath: String) {
+        val intent = Intent(this, OpenVpnVpnService::class.java)
+            .setAction(OpenVpnVpnService.ACTION_EVALUATE_PROFILE)
+            .putExtra(OpenVpnVpnService.EXTRA_PROFILE_PATH, profilePath)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+            else startService(intent)
+            Toast.makeText(this, "Проверка профиля OpenVPN 3 запущена. Подключения к серверу нет.", Toast.LENGTH_LONG).show()
+        } catch (_: Exception) {
+            Toast.makeText(this, "Не удалось запустить проверку профиля OpenVPN.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun startOpenVpnServiceSmokeTest() {
+        val intent = Intent(this, OpenVpnVpnService::class.java).setAction(
+            OpenVpnVpnService.ACTION_START_FOREGROUND
+        )
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            Toast.makeText(
+                this,
+                "Служба OpenVPN запущена для проверки. VPN-туннель НЕ подключён.",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (_: Exception) {
+            Toast.makeText(this, "Не удалось запустить службу OpenVPN.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -535,8 +714,8 @@ class MainActivity : Activity() {
         openVpnCoreButton.isEnabled = false
         Thread {
             val result = try {
-                val platform = OpenVpn3Core.nativePlatform()
-                "Нативное ядро OpenVPN 3 загружено.\\nПлатформа: $platform\\n\\nЭто проверка сборки и вызова ClientAPI. Подключение OpenVPN, TUN-интерфейс, маршруты и DNS пока не реализованы."
+                val platform = OpenVpn3SwigApi.platform()
+                "Java/SWIG ClientAPI OpenVPN 3 загружен.\\nПлатформа: $platform\\n\\nЭто проверка сгенерированного SWIG API и нативного ядра. Подключение OpenVPN, TUN-интерфейс, маршруты и DNS пока не реализованы."
             } catch (error: Throwable) {
                 "Не удалось загрузить OpenVPN 3 Core.\\n\\nПричина: ${error.message ?: error.javaClass.simpleName}"
             }
@@ -544,7 +723,7 @@ class MainActivity : Activity() {
             runOnUiThread {
                 isOpenVpnCoreCheckRunning = false
                 openVpnCoreButton.isEnabled = true
-                val loaded = result.startsWith("Нативное ядро OpenVPN 3 загружено")
+                val loaded = result.startsWith("Java/SWIG ClientAPI OpenVPN 3 загружен")
                 AlertDialog.Builder(this)
                     .setTitle(if (loaded) "OpenVPN Core готов к следующему этапу" else "Ошибка OpenVPN Core")
                     .setMessage(result)
