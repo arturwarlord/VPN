@@ -109,6 +109,12 @@ jobs:
           grep -q 'POST_NOTIFICATIONS' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           grep -q 'startForegroundService(intent)' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           grep -q 'onNativeEvent' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'ACTION_CONNECT_PROFILE' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'connectProfileInBackground(path, startId)' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'session.evaluateProfile(profile)' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'session.start()' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'session.stop()' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'nativeSession.also { nativeSession = null }' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           grep -q 'nativeEventMethod_' app/src/main/cpp/openvpn_client_bridge.hpp
           grep -q 'GetMethodID(cls, "onNativeEvent"' app/src/main/cpp/openvpn_client_bridge.cpp
           grep -q 'e.fatal' app/src/main/cpp/openvpn_client_bridge.cpp
