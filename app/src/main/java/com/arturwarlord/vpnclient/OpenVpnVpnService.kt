@@ -28,17 +28,30 @@ class OpenVpnVpnService : VpnService() {
         const val ACTION_START_FOREGROUND = "com.arturwarlord.vpnclient.OPENVPN_START_FOREGROUND"
         const val ACTION_STOP = "com.arturwarlord.vpnclient.OPENVPN_STOP"
         const val ACTION_EVALUATE_PROFILE = "com.arturwarlord.vpnclient.OPENVPN_EVALUATE_PROFILE"
+        const val ACTION_CONNECT_PROFILE = "com.arturwarlord.vpnclient.OPENVPN_CONNECT_PROFILE"
         const val EXTRA_PROFILE_PATH = "com.arturwarlord.vpnclient.EXTRA_PROFILE_PATH"
     }
 
     @Volatile private var foregroundReady = false
     @Volatile private var evaluationThread: Thread? = null
+    @Volatile private var connectionThread: Thread? = null
+    private val sessionLock = Any()
+    @Volatile private var nativeSession: OpenVpn3NativeSession? = null
 
     override fun onBind(intent: Intent?): IBinder? = super.onBind(intent)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_FOREGROUND -> startForegroundSession()
+            ACTION_CONNECT_PROFILE -> {
+                val path = intent.getStringExtra(EXTRA_PROFILE_PATH)
+                if (path.isNullOrBlank()) {
+                    Log.w(TAG, "Rejected OpenVPN connect without a profile path")
+                    stopSelf(startId)
+                } else if (startForegroundSession()) {
+                    connectProfileInBackground(path, startId)
+                }
+            }
             ACTION_EVALUATE_PROFILE -> {
                 val path = intent.getStringExtra(EXTRA_PROFILE_PATH)
                 if (path.isNullOrBlank()) {
@@ -152,6 +165,75 @@ class OpenVpnVpnService : VpnService() {
         worker.start()
     }
 
+    /**
+     * Starts the native worker only after Android VPN consent and foreground
+     * service startup. This internal action currently supports autologin
+     * profiles only; credential-required and unsupported profiles fail closed.
+     */
+    private fun connectProfileInBackground(path: String, startId: Int) {
+        if (connectionThread?.isAlive == true || nativeSession != null) {
+            updateNotification("OpenVPN уже выполняет подключение или работает")
+            return
+        }
+
+        val worker = Thread({
+            var session: OpenVpn3NativeSession? = null
+            try {
+                val profile = OpenVpnProfileStore(this).readText(File(path))
+                session = OpenVpn3NativeSession(this)
+                synchronized(sessionLock) {
+                    if (!foregroundReady || nativeSession != null) {
+                        session.close()
+                        return@Thread
+                    }
+                    nativeSession = session
+                }
+
+                val accepted = synchronized(sessionLock) {
+                    foregroundReady && nativeSession === session && session.evaluateProfile(profile)
+                }
+                if (!accepted) {
+                    releaseNativeSession(session)
+                    if (foregroundReady) updateNotification("OpenVPN 3 Core отклонил профиль")
+                    return@Thread
+                }
+
+                val started = synchronized(sessionLock) {
+                    foregroundReady && nativeSession === session && session.start()
+                }
+                if (!started) {
+                    releaseNativeSession(session)
+                    if (foregroundReady) {
+                        updateNotification("Профиль требует логин/пароль или содержит неподдерживаемые настройки")
+                    }
+                    return@Thread
+                }
+
+                updateNotification("Нативный OpenVPN запущен; ожидаем ответ сервера")
+            } catch (error: Exception) {
+                session?.let { releaseNativeSession(it) }
+                Log.w(TAG, "OpenVPN connection startup failed (" + error.javaClass.simpleName + ")")
+                if (foregroundReady) updateNotification("Не удалось запустить OpenVPN")
+            } finally {
+                connectionThread = null
+                if (!foregroundReady && nativeSession == null) stopSelf(startId)
+            }
+        }, "FreeRoute-OpenVPN-connect")
+        connectionThread = worker
+        worker.start()
+    }
+
+    private fun releaseNativeSession(session: OpenVpn3NativeSession) {
+        synchronized(sessionLock) {
+            if (nativeSession === session) nativeSession = null
+        }
+        try {
+            session.stop()
+        } finally {
+            session.close()
+        }
+    }
+
     private fun updateNotification(status: String) {
         try {
             getSystemService(NotificationManager::class.java)
@@ -177,8 +259,28 @@ class OpenVpnVpnService : VpnService() {
     private fun stopForegroundSession() {
         foregroundReady = false
         evaluationThread?.interrupt()
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        connectionThread?.interrupt()
+        val session = synchronized(sessionLock) {
+            nativeSession.also { nativeSession = null }
+        }
+        if (session == null) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return
+        }
+
+        updateNotification("Останавливаем OpenVPN…")
+        Thread({
+            try {
+                session.stop()
+            } catch (error: Exception) {
+                Log.w(TAG, "OpenVPN stop request failed (" + error.javaClass.simpleName + ")")
+            } finally {
+                session.close()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }, "FreeRoute-OpenVPN-stop").start()
     }
 
     override fun onRevoke() {
@@ -189,6 +291,19 @@ class OpenVpnVpnService : VpnService() {
     override fun onDestroy() {
         foregroundReady = false
         evaluationThread?.interrupt()
+        connectionThread?.interrupt()
+        val session = synchronized(sessionLock) {
+            nativeSession.also { nativeSession = null }
+        }
+        if (session != null) {
+            try {
+                session.stop()
+            } catch (error: Exception) {
+                Log.w(TAG, "OpenVPN teardown failed (" + error.javaClass.simpleName + ")")
+            } finally {
+                session.close()
+            }
+        }
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
