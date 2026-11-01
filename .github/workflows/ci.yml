@@ -112,7 +112,7 @@ jobs:
           grep -q 'ACTION_CONNECT_PROFILE' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           grep -q 'connectProfileInBackground(path, startId)' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           grep -q 'session.evaluateProfile(profile)' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
-          grep -q 'session.start()' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
+          grep -q 'activeSession.start()' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           grep -q 'session.stop()' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           grep -q 'nativeSession.also { nativeSession = null }' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           test -s docs/ANDROID_OPENVPN_SERVICE_NATIVE_SESSION_PHASE10.md
