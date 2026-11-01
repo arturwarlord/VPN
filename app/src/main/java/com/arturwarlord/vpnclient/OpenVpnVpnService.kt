@@ -16,8 +16,8 @@ import java.io.File
 /**
  * Android service boundary for OpenVPN 3.
  *
- * Owns the OpenVPN service lifecycle. Profile evaluation is parser-only and
- * never starts the native connection worker or establishes a TUN.
+ * Owns the OpenVPN service lifecycle and its optional native session.
+ * The internal development connect action is not exposed as verified VPN UI.
  */
 class OpenVpnVpnService : VpnService() {
     companion object {
@@ -180,29 +180,30 @@ class OpenVpnVpnService : VpnService() {
             var session: OpenVpn3NativeSession? = null
             try {
                 val profile = OpenVpnProfileStore(this).readText(File(path))
-                session = OpenVpn3NativeSession(this)
+                val activeSession = OpenVpn3NativeSession(this)
+                session = activeSession
                 synchronized(sessionLock) {
                     if (!foregroundReady || nativeSession != null) {
-                        session.close()
+                        activeSession.close()
                         return@Thread
                     }
-                    nativeSession = session
+                    nativeSession = activeSession
                 }
 
                 val accepted = synchronized(sessionLock) {
-                    foregroundReady && nativeSession === session && session.evaluateProfile(profile)
+                    foregroundReady && nativeSession === activeSession && activeSession.evaluateProfile(profile)
                 }
                 if (!accepted) {
-                    releaseNativeSession(session)
+                    releaseNativeSession(activeSession)
                     if (foregroundReady) updateNotification("OpenVPN 3 Core отклонил профиль")
                     return@Thread
                 }
 
                 val started = synchronized(sessionLock) {
-                    foregroundReady && nativeSession === session && session.start()
+                    foregroundReady && nativeSession === activeSession && activeSession.start()
                 }
                 if (!started) {
-                    releaseNativeSession(session)
+                    releaseNativeSession(activeSession)
                     if (foregroundReady) {
                         updateNotification("Профиль требует логин/пароль или содержит неподдерживаемые настройки")
                     }
