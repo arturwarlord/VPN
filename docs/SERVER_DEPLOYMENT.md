@@ -100,6 +100,19 @@ The registration script refuses unmanaged configurations, duplicate public keys,
 
 **Current limitation:** Android now generates the WireGuard key pair locally, encrypts the pending private key with Android Keystore, and can assemble/save the profile after the user pastes the workflow's `REGISTRATION_JSON` result. Starting the workflow and copying its result are still manual. There is not yet a hosted management API, one-tap registration, or in-app peer revocation. The workflow still requires a deployed server and verified SSH secrets.
 
+## Revoke a lost or retired device
+
+After the server is deployed, a named device can be removed using **Actions → Revoke FreeRoute WireGuard device → Run workflow**.
+
+1. Enter the exact device label used during registration (for example, `poco-x4`) and the provider's SSH port.
+2. The workflow connects through the verified `VPN_KNOWN_HOSTS` SSH pin and runs the revocation script on the server.
+3. The script accepts only a uniquely labelled FreeRoute peer, checks that the peer is currently active, removes its public key from the live `wg0` interface, and atomically removes the matching peer block from `/etc/wireguard/wg0.conf`.
+4. The result reports only the device label and number of removed address entries. No private key or full peer configuration is displayed.
+
+The script serializes with registration using the same lock. It refuses to remove the legacy Windows/Android/iPhone bootstrap peers, unmanaged configurations, unknown labels, duplicate labels, or a config/runtime mismatch. If persistence fails after the live peer has been removed, it attempts to restore the peer's previous AllowedIPs in the running interface.
+
+Revocation blocks future handshakes for that device after the peer removal is applied. It does not remotely erase a profile already stored on a lost phone; delete that app/profile separately when the device is recovered.
+
 ## Test from a client
 
 After transferring one profile through an authenticated private channel:
