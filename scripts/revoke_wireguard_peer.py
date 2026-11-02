@@ -87,9 +87,9 @@ def build_revoked_config(config_text: str, device_name: str) -> tuple[str, str, 
     for start, end in peer_blocks:
         block_text = "".join(lines[start:end])
         target_marker_count += len(
-            re.findall(rf"(?m)^\\s*{re.escape(marker)}\\s*$", block_text)
+            re.findall(rf"(?m)^\s*{re.escape(marker)}\s*$", block_text)
         )
-        if re.search(rf"(?m)^\\s*{re.escape(marker)}\\s*$", block_text):
+        if re.search(rf"(?m)^\s*{re.escape(marker)}\s*$", block_text):
             public_key, allowed_ips, marker_found = _parse_peer_block(lines, start, end)
             if not marker_found:
                 raise ValueError("The matching device marker could not be parsed.")
