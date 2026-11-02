@@ -9,6 +9,8 @@ import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.IBinder
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import java.io.File
@@ -36,6 +38,7 @@ class OpenVpnVpnService : VpnService() {
     @Volatile private var evaluationThread: Thread? = null
     @Volatile private var connectionThread: Thread? = null
     private val sessionLock = Any()
+    private val mainHandler = Handler(Looper.getMainLooper())
     @Volatile private var nativeSession: OpenVpn3NativeSession? = null
 
     override fun onBind(intent: Intent?): IBinder? = super.onBind(intent)
@@ -315,24 +318,58 @@ class OpenVpnVpnService : VpnService() {
      */
     @Suppress("unused")
     fun onNativeEvent(name: String, error: Boolean, fatal: Boolean) {
-        if (!foregroundReady) return
+        // JNI invokes this callback on the OpenVPN worker thread. Marshal all
+        // Android service/UI-facing work to the main looper.
+        mainHandler.post {
+            if (!foregroundReady) return@post
 
-        val status = when {
-            fatal -> "OpenVPN остановил подключение из-за ошибки"
-            error -> "Ошибка OpenVPN; подробности не сохранены"
-            else -> when (name.uppercase()) {
-                "RESOLVE" -> "Определяем адрес VPN-сервера"
-                "TCP_CONNECT", "UDP_CONNECT" -> "Подключаемся к VPN-серверу"
-                "WAIT" -> "Ожидаем ответ VPN-сервера"
-                "AUTH" -> "Проверяем авторизацию OpenVPN"
-                "GET_CONFIG", "ASSIGN_IP", "ADD_ROUTES" -> "Настраиваем VPN-туннель"
-                "CONNECTED" -> "OpenVPN установил соединение; трафик ещё не проверен"
-                "RECONNECTING" -> "OpenVPN переподключается"
-                "DISCONNECTED", "EXITING" -> "OpenVPN отключён"
-                else -> "OpenVPN обновляет состояние"
+            val eventName = name.uppercase()
+            val status = when {
+                fatal -> "OpenVPN остановил подключение из-за ошибки"
+                error -> "Ошибка OpenVPN; подробности не сохранены"
+                else -> when (eventName) {
+                    "RESOLVE" -> "Определяем адрес VPN-сервера"
+                    "TCP_CONNECT", "UDP_CONNECT" -> "Подключаемся к VPN-серверу"
+                    "WAIT" -> "Ожидаем ответ VPN-сервера"
+                    "AUTH" -> "Проверяем авторизацию OpenVPN"
+                    "GET_CONFIG", "ASSIGN_IP", "ADD_ROUTES" -> "Настраиваем VPN-туннель"
+                    "CONNECTED" -> "OpenVPN установил соединение; трафик ещё не проверен"
+                    "RECONNECTING" -> "OpenVPN переподключается"
+                    "DISCONNECTED", "EXITING" -> "OpenVPN отключён"
+                    else -> "OpenVPN обновляет состояние"
+                }
+            }
+            updateNotification(status)
+
+            // EXITING is the terminal native-worker event. A fatal event also
+            // requests cleanup, but cleanup runs on a separate thread so the
+            // JNI callback never attempts to join its own native worker.
+            if (fatal || eventName == "EXITING") {
+                cleanupNativeSessionAfterExit()
             }
         }
-        updateNotification(status)
+    }
+
+    private fun cleanupNativeSessionAfterExit() {
+        val session = synchronized(sessionLock) {
+            nativeSession.also { nativeSession = null }
+        } ?: return
+
+        Thread({
+            try {
+                session.stop()
+            } catch (error: Exception) {
+                Log.w(TAG, "OpenVPN exit cleanup failed (" + error.javaClass.simpleName + ")")
+            } finally {
+                session.close()
+                if (foregroundReady) {
+                    updateNotification("OpenVPN завершил работу; можно подключиться снова")
+                } else {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+            }
+        }, "FreeRoute-OpenVPN-exit-cleanup").start()
     }
 
     /**
