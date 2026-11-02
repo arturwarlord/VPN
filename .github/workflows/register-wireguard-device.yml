@@ -197,14 +197,30 @@ jobs:
           print(f"Server public key: {data['server_public_key']}")
           print("The client private key was not sent to the server or GitHub.")
           print("The profile can now be assembled locally on the device.")
+          metadata = {
+              "device_name": data["device_name"],
+              "ipv4": data["ipv4"],
+              "ipv6": data["ipv6"],
+              "server_public_key": data["server_public_key"],
+              "endpoint_ip": str(endpoint),
+              "endpoint_port": sys.argv[4]
+          }
+          registration_json = json.dumps(metadata, separators=(",", ":"), sort_keys=True)
+          print("REGISTRATION_JSON=" + registration_json)
           summary = [
               "## FreeRoute device registration",
-              f"- Device: \`{data['device_name']}\`",
-              f"- Client IPv4: \`{data['ipv4']}\`",
-              f"- Client IPv6: \`{data['ipv6']}\`",
-              f"- Endpoint: \`{endpoint_host}:{sys.argv[4]}\`",
-              f"- Server public key: \`{data['server_public_key']}\`",
-              "- Private key: generated and retained on the client; not uploaded."
+              f"- Device: `{data['device_name']}`",
+              f"- Client IPv4: `{data['ipv4']}`",
+              f"- Client IPv6: `{data['ipv6']}`",
+              f"- Endpoint: `{endpoint_host}:{sys.argv[4]}`",
+              f"- Server public key: `{data['server_public_key']}`",
+              "- Private key: generated and retained on the client; not uploaded.",
+              "",
+              "Copy this JSON into FreeRoute to assemble the local profile:",
+              "",
+              "```json",
+              registration_json,
+              "```"
           ]
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
               handle.write("\n".join(summary) + "\n")
