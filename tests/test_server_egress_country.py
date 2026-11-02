@@ -26,11 +26,10 @@ class FakeResponse:
 class ServerEgressCountryTests(unittest.TestCase):
     def test_non_russian_public_ipv4_passes(self):
         result = _validate_geo_response(
-            "203.0.113.10",
-            {"success": True, "ip": "203.0.113.10", "country": "Germany", "country_code": "DE"},
+            "8.8.8.8",
+            {"success": True, "ip": "8.8.8.8", "country": "United States", "country_code": "US"},
         )
-        # The address above is a documentation range and must not pass as global.
-        self.assertEqual(result, ("Germany", "DE"))
+        self.assertEqual(result, ("United States", "US"))
 
     def test_russia_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "geolocates to Russia"):
