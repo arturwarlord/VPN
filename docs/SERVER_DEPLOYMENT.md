@@ -82,8 +82,11 @@ Open **Actions → Diagnose WireGuard server → Run workflow** after deployment
 - The first `INPUT` rule drops all traffic arriving from `wg0`, preventing VPN clients from reaching services on the VPS itself.
 - The chain blocks known private and special-purpose IPv4 destinations and forwards client traffic only out through the detected WAN interface.
 - Windows, Android and iPhone profiles exist with permissions 600 and no placeholder endpoint.
+- The server's actual outbound IPv4 address is identified and geolocated; the diagnostic fails closed if the lookup fails, does not match the address, or reports Russia.
 
-It prints counts and status only; it does not print any private keys or client profile contents. The check cannot verify the provider's external firewall, whether the client has connected, or whether a public-IP/geolocation lookup returns the expected country.
+The country check runs from the server itself. It requests the public IPv4 from `api.ipify.org` and sends that address to `ipwho.is` for a country estimate. The public IP is not printed or stored by the workflow, but both services receive it. The check prints only the country and country code. IP geolocation is an estimate, not a guarantee of how every website classifies the address.
+
+The diagnostic does not print private keys or client profile contents. It still cannot verify the provider's external UDP firewall, whether the client has completed a handshake, or whether client DNS/IPv6 traffic leaks outside the tunnel.
 
 ## Register a device using only its public key
 
