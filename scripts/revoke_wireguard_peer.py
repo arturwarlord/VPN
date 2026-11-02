@@ -102,7 +102,7 @@ def build_revoked_config(config_text: str, device_name: str) -> tuple[str, str, 
     if target_marker_count != len(matches):
         raise ValueError("The configuration contains a duplicate or malformed marker for this device.")
     if len(matches) > 1:
-        raise ValueError("Duplicate FreeRoute device labels were found; refusing to revoke an ambiguous peer.")
+        raise ValueError("duplicate FreeRoute device labels were found; refusing to revoke an ambiguous peer.")
     if len(matches) == 0:
         raise ValueError("No registered FreeRoute device with this name was found.")
 
