@@ -98,7 +98,7 @@ After a FreeRoute server has been deployed and the four pinned-SSH repository se
 
 The registration script refuses unmanaged configurations, duplicate public keys, duplicate device labels, invalid labels, invalid address entries and exhausted address pools. If the live WireGuard update succeeds but the persistent config cannot be replaced, it removes the newly added runtime peer. The workflow never uploads a client private key or a complete client profile.
 
-**Current limitation:** this is the first server-side registration milestone. The Android app does not yet generate the device key pair or assemble this profile automatically. Do not run this workflow until a server is deployed and a device-side key-generation flow is available. Client registration/revocation from the app and a full control API are later stages.
+**Current limitation:** Android now generates the WireGuard key pair locally, encrypts the pending private key with Android Keystore, and can assemble/save the profile after the user pastes the workflow's `REGISTRATION_JSON` result. Starting the workflow and copying its result are still manual. There is not yet a hosted management API, one-tap registration, or in-app peer revocation. The workflow still requires a deployed server and verified SSH secrets.
 
 ## Test from a client
 
