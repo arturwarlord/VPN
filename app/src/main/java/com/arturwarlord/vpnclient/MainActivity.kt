@@ -4,11 +4,14 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.database.Cursor
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.VpnService
+import android.net.Uri
 import android.os.Bundle
 import android.os.Build
 import android.os.Handler
@@ -16,8 +19,10 @@ import android.os.Looper
 import android.provider.OpenableColumns
 import android.content.pm.PackageManager
 import android.view.Gravity
+import android.text.InputType
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.ScrollView
@@ -26,10 +31,13 @@ import android.widget.Toast
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
+import com.wireguard.crypto.Key
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.Inet4Address
 import java.net.Inet6Address
+import java.net.InetAddress
 import java.net.URL
 import org.json.JSONObject
 
@@ -206,17 +214,272 @@ class MainActivity : Activity() {
     private fun showProfileImportChoices() {
         AlertDialog.Builder(this)
             .setTitle("Добавить профиль")
-            .setItems(arrayOf("WireGuard (.conf)", "OpenVPN (.ovpn)")) { _, choice ->
-                val request = if (choice == 0) pickProfileRequest else pickOpenVpnProfileRequest
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "*/*"
+            .setItems(
+                arrayOf(
+                    "WireGuard (.conf)",
+                    "OpenVPN (.ovpn)",
+                    "Собственный сервер FreeRoute"
+                )
+            ) { _, choice ->
+                when (choice) {
+                    0, 1 -> {
+                        val request = if (choice == 0) pickProfileRequest else pickOpenVpnProfileRequest
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "*/*"
+                        }
+                        @Suppress("DEPRECATION")
+                        startActivityForResult(intent, request)
+                    }
+                    2 -> beginFreeRouteEnrollment()
                 }
-                @Suppress("DEPRECATION")
-                startActivityForResult(intent, request)
             }
             .setNegativeButton("Отмена", null)
             .show()
+    }
+
+    private fun beginFreeRouteEnrollment() {
+        if (isConnected || isBusy) {
+            Toast.makeText(this, "Отключи VPN перед созданием нового профиля.", Toast.LENGTH_LONG).show()
+            return
+        }
+        try {
+            val pending = FreeRouteEnrollmentStore(this).loadOrCreate()
+            showFreeRouteEnrollmentDialog(pending)
+        } catch (error: Exception) {
+            Toast.makeText(
+                this,
+                error.message ?: "Не удалось создать ключ устройства.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun showFreeRouteEnrollmentDialog(pending: FreeRouteEnrollmentStore.PendingEnrollment) {
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(12), dp(20), dp(8))
+        }
+        val instructions = TextView(this).apply {
+            text = "1. Скопируй публичный ключ.\n" +
+                "2. Открой GitHub Actions и запусти Register FreeRoute WireGuard device.\n" +
+                "3. Укажи имя устройства и публичный ключ, затем IP сервера и внешний UDP-порт.\n" +
+                "4. Скопируй строку REGISTRATION_JSON из результата Actions и вставь её ниже.\n\n" +
+                "Приватный ключ создан на телефоне и зашифрован Android Keystore. На сервер он не отправляется."
+            textSize = 13f
+            setTextColor(Color.rgb(170, 184, 210))
+        }
+        body.addView(instructions, matchWidthWrapHeight())
+
+        val deviceLabel = TextView(this).apply {
+            text = "Имя устройства: " + pending.deviceName
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            setPadding(0, dp(12), 0, dp(6))
+        }
+        body.addView(deviceLabel, matchWidthWrapHeight())
+
+        val publicKeyView = TextView(this).apply {
+            text = pending.publicKey
+            textSize = 12f
+            typeface = Typeface.MONOSPACE
+            setTextColor(Color.rgb(220, 230, 245))
+            setTextIsSelectable(true)
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            background = rounded(Color.rgb(24, 34, 55), 10)
+        }
+        body.addView(publicKeyView, matchWidthWrapHeight())
+
+        val metadataInput = EditText(this).apply {
+            hint = "Вставь REGISTRATION_JSON из GitHub Actions"
+            inputType = InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            minLines = 4
+            maxLines = 7
+            gravity = Gravity.TOP
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.rgb(140, 153, 177))
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            setBackgroundColor(Color.rgb(24, 34, 55))
+        }
+        val scrollBody = ScrollView(this).apply {
+            isFillViewport = false
+            addView(body, matchWidthWrapHeight())
+        }
+        body.addView(metadataInput, matchWidthWrapHeight())
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Свой сервер FreeRoute")
+            .setView(scrollBody)
+            .setNeutralButton("Копировать ключ", null)
+            .setNegativeButton("Открыть Actions") { _, _ ->
+                try {
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://github.com/arturwarlord/VPN/actions/workflows/register-wireguard-device.yml")
+                        )
+                    )
+                } catch (_: Exception) {
+                    Toast.makeText(this, "Не удалось открыть GitHub Actions.", Toast.LENGTH_LONG).show()
+                }
+            }
+            .setPositiveButton("Создать профиль", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("FreeRoute WireGuard public key", pending.publicKey))
+                Toast.makeText(this, "Публичный ключ скопирован.", Toast.LENGTH_SHORT).show()
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    val saved = createFreeRouteProfile(pending, metadataInput.text.toString())
+                    dialog.dismiss()
+                    Toast.makeText(
+                        this,
+                        "Профиль FreeRoute создан: " + saved.nameWithoutExtension,
+                        Toast.LENGTH_LONG
+                    ).show()
+                } catch (error: Exception) {
+                    metadataInput.error = error.message ?: "Проверь данные регистрации."
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun createFreeRouteProfile(
+        pending: FreeRouteEnrollmentStore.PendingEnrollment,
+        rawMetadata: String
+    ): File {
+        val suppliedText = rawMetadata.trim()
+        require(suppliedText.isNotEmpty()) { "Сначала вставь результат регистрации из GitHub Actions." }
+        val jsonText = if (suppliedText.startsWith("REGISTRATION_JSON=")) {
+            suppliedText.substringAfter("REGISTRATION_JSON=").trim()
+        } else {
+            suppliedText
+        }
+        val metadata = JSONObject(jsonText)
+        require(metadata.getString("device_name") == pending.deviceName) {
+            "Вставлен результат для другого устройства. Запусти регистрацию с текущим публичным ключом."
+        }
+
+        val clientIpv4 = parseLiteralAddress(metadata.getString("ipv4"))
+        require(clientIpv4 is Inet4Address) { "Сервер вернул некорректный IPv4-адрес устройства." }
+        val ipv4Bytes = clientIpv4.address.map { it.toInt() and 0xff }
+        require(
+            ipv4Bytes[0] == 10 && ipv4Bytes[1] == 77 && ipv4Bytes[2] == 0 &&
+                ipv4Bytes[3] in 2..254
+        ) { "IPv4-адрес устройства находится вне пула FreeRoute." }
+
+        val clientIpv6 = parseLiteralAddress(metadata.getString("ipv6"))
+        require(clientIpv6 is Inet6Address) { "Сервер вернул некорректный IPv6-адрес устройства." }
+        val ipv6Bytes = clientIpv6.address.map { it.toInt() and 0xff }
+        val expectedPrefix = listOf(0xfd, 0x4b, 0x8d, 0x2c, 0x6a, 0x91, 0, 0)
+        require(ipv6Bytes.take(8) == expectedPrefix && ipv6Bytes.slice(8..14).all { it == 0 } &&
+            ipv6Bytes[15] == ipv4Bytes[3]
+        ) { "IPv6-адрес не соответствует выделенному адресу FreeRoute." }
+
+        val serverAddress = parsePublicEndpointAddress(metadata.getString("endpoint_ip"))
+        val endpointPort = metadata.getString("endpoint_port")
+        require(endpointPort.matches(Regex("[1-9][0-9]{0,4}")) && endpointPort.toInt() in 1..65535) {
+            "Внешний UDP-порт сервера указан неверно."
+        }
+
+        val serverPublicKey = metadata.getString("server_public_key")
+        val parsedServerKey = Key.fromBase64(serverPublicKey)
+        require(parsedServerKey.getBytes().any { it.toInt() != 0 }) {
+            "Публичный ключ сервера не может быть нулевым."
+        }
+        val parsedPrivateKey = Key.fromBase64(pending.privateKey)
+        require(parsedPrivateKey.getBytes().any { it.toInt() != 0 }) {
+            "Локальный приватный ключ устройства повреждён."
+        }
+
+        val endpointHost = if (serverAddress is Inet6Address) {
+            "[" + serverAddress.hostAddress.substringBefore('%') + "]"
+        } else {
+            serverAddress.hostAddress
+        }
+        val configText = "[Interface]\n" +
+            "PrivateKey = " + pending.privateKey + "\n" +
+            "Address = " + metadata.getString("ipv4") + "/32, " + metadata.getString("ipv6") + "/128\n" +
+            "DNS = 1.1.1.1\n\n" +
+            "[Peer]\n" +
+            "PublicKey = " + serverPublicKey + "\n" +
+            "Endpoint = " + endpointHost + ":" + endpointPort + "\n" +
+            "AllowedIPs = 0.0.0.0/0, ::/0\n" +
+            "PersistentKeepalive = 25\n"
+
+        val parsedConfig = Config.parse(ByteArrayInputStream(configText.toByteArray(Charsets.UTF_8)))
+        val profileName = "freeroute-" + pending.deviceName + ".conf"
+        val newFile = uniqueProfileFile(profileName)
+        newFile.writeText(configText, Charsets.UTF_8)
+        if (!newFile.setReadable(false, false) || !newFile.setReadable(true, true)) {
+            newFile.delete()
+            throw IllegalStateException("Не удалось ограничить доступ к файлу профиля.")
+        }
+        // Keep the pending key encrypted until the validated profile has been persisted.
+        FreeRouteEnrollmentStore(this).clear()
+        loadSavedProfiles(newFile.name)
+        return newFile
+    }
+
+    private fun parseLiteralAddress(value: String): InetAddress {
+        val host = value.trim()
+        require(host.isNotEmpty() && !host.contains("%") && !host.startsWith("[") && !host.endsWith("]")) {
+            "Укажи IP-адрес без скобок и зоны интерфейса."
+        }
+        if (host.contains(":")) {
+            require(host.matches(Regex("[0-9A-Fa-f:.]+"))) { "IPv6-адрес указан неверно." }
+            val parsed = InetAddress.getByName(host)
+            require(parsed is Inet6Address) { "Ожидался IPv6-адрес." }
+            return parsed
+        }
+        val parts = host.split(".")
+        require(parts.size == 4 && parts.all { part ->
+            part.matches(Regex("0|[1-9][0-9]{0,2}") ) && part.toIntOrNull() in 0..255
+        }) { "IPv4-адрес указан неверно." }
+        val parsed = InetAddress.getByName(host)
+        require(parsed is Inet4Address) { "Ожидался IPv4-адрес." }
+        return parsed
+    }
+
+    private fun parsePublicEndpointAddress(value: String): InetAddress {
+        val address = parseLiteralAddress(value)
+        require(
+            !address.isAnyLocalAddress && !address.isLoopbackAddress &&
+                !address.isLinkLocalAddress && !address.isSiteLocalAddress &&
+                !address.isMulticastAddress
+        ) { "Endpoint должен быть публичным IP-адресом." }
+
+        if (address is Inet4Address) {
+            val bytes = address.address.map { it.toInt() and 0xff }
+            val a = bytes[0]
+            val b = bytes[1]
+            val c = bytes[2]
+            val special = a == 0 || a == 10 || a == 127 || a >= 224 ||
+                (a == 100 && b in 64..127) ||
+                (a == 169 && b == 254) ||
+                (a == 172 && b in 16..31) ||
+                (a == 192 && (b == 0 || b == 168)) ||
+                (a == 192 && b == 88 && c == 99) ||
+                (a == 198 && b in 18..19) ||
+                (a == 198 && b == 51 && c == 100) ||
+                (a == 203 && b == 0 && c == 113) ||
+                (a == 255 && b == 255 && c == 255)
+            require(!special) { "Endpoint должен быть публичным IPv4-адресом." }
+        } else if (address is Inet6Address) {
+            val firstByte = address.address[0].toInt() and 0xff
+            require((firstByte and 0xe0) == 0x20) {
+                "Для IPv6 endpoint требуется глобальный unicast-адрес."
+            }
+        }
+        return address
     }
 
     private fun loadSavedProfiles(preferredFileName: String? = null) {
