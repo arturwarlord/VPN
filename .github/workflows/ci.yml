@@ -133,6 +133,13 @@ jobs:
           grep -q 'e.fatal' app/src/main/cpp/openvpn_client_bridge.cpp
           grep -q 'CONNECTED' app/src/main/java/com/arturwarlord/vpnclient/OpenVpnVpnService.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          test -s app/src/main/java/com/arturwarlord/vpnclient/FreeRouteEnrollmentStore.kt
+          grep -q 'KeyPair()' app/src/main/java/com/arturwarlord/vpnclient/FreeRouteEnrollmentStore.kt
+          grep -q 'AndroidKeyStore' app/src/main/java/com/arturwarlord/vpnclient/FreeRouteEnrollmentStore.kt
+          grep -q 'AES/GCM/NoPadding' app/src/main/java/com/arturwarlord/vpnclient/FreeRouteEnrollmentStore.kt
+          grep -q 'Собственный сервер FreeRoute' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'REGISTRATION_JSON=' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
+          grep -q 'Key.fromBase64' app/src/main/java/com/arturwarlord/vpnclient/MainActivity.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3Core.kt
           test -s app/src/main/java/com/arturwarlord/vpnclient/OpenVpn3SwigApi.kt
           test -s app/src/main/cpp/CMakeLists.txt
