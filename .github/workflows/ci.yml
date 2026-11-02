@@ -40,6 +40,7 @@ jobs:
           bash tests/validate-download-site.sh
           python3 -m unittest discover -s tests -p 'test_public_vpn_sources.py' -v
           python3 -m unittest discover -s tests -p 'test_wireguard_peer_registration.py' -v
+          python3 -m unittest discover -s tests -p 'test_wireguard_peer_revocation.py' -v
 
       - name: Check required project files and build settings
         shell: bash
@@ -48,13 +49,20 @@ jobs:
           test -s README.md
           test -s scripts/setup-wireguard.sh
           test -s scripts/register_wireguard_peer.py
+          test -s scripts/revoke_wireguard_peer.py
           test -s tests/test_wireguard_peer_registration.py
+          test -s tests/test_wireguard_peer_revocation.py
           test -s .github/workflows/register-wireguard-device.yml
+          test -s .github/workflows/revoke-wireguard-device.yml
           grep -q 'WG_CLIENT_PUBLIC_KEY' scripts/register_wireguard_peer.py
           grep -q 'client private key' scripts/register_wireguard_peer.py
           grep -q 'freeroute-device:' scripts/register_wireguard_peer.py
           grep -q 'StrictHostKeyChecking=yes' .github/workflows/register-wireguard-device.yml
           grep -q 'country_code.*RU' .github/workflows/register-wireguard-device.yml
+          grep -q 'StrictHostKeyChecking=yes' .github/workflows/revoke-wireguard-device.yml
+          grep -q 'WG_DEVICE_NAME' scripts/revoke_wireguard_peer.py
+          grep -q 'freeroute-device:' scripts/revoke_wireguard_peer.py
+          grep -q 'Another FreeRoute peer registration or revocation is already running' scripts/revoke_wireguard_peer.py
           grep -q 'Set WG_ENDPOINT' scripts/setup-wireguard.sh
           grep -q 'FreeRoute managed WireGuard configuration' scripts/setup-wireguard.sh
           grep -q 'attempting to restore the previous config' scripts/setup-wireguard.sh

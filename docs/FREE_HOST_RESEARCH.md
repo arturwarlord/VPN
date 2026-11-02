@@ -1,14 +1,19 @@
 # Free VPN exit-server research
 
-**Last checked:** 30 October 2026  
+**Last checked:** 2 November 2026  
 **Hard requirement:** EUR 0/month, server outside Russia, WireGuard/root networking support, public reachability and no automatic conversion to a paid plan. A candidate is not approved just because its homepage says "free."
 
 ## Decision summary
 
-No candidate below is approved as a dependable, unattended production exit server. switched.cloud has no free VPS/container capacity when the user attempted to provision it, so it is on hold. There are now two conditional leads:
-- **FOSSVPS (Frankfurt)** has the strongest published resources and no advertised daily keep-alive, but it is gated by strict LowEndTalk/LowEndSpirit reputation rules, our repository currently has no open-source license file, and inbound UDP/WireGuard permission still needs confirmation.
-- **Openworld** is the more accessible next technical prototype: root SSH, systemd containers, NAT IPv4 and public IPv6 are documented, but private personal WireGuard permission, UDP reachability and TUN/CAP_NET_ADMIN must be confirmed. It requires manual renewal once every 24 hours.
-TheUltraHost is another conditional option only for verified students; although the provider page explicitly mentions personal VPN over IPv6, the site's free-tier terms remain a non-binding draft and the site itself still says "Demo build". Do not pay, add a card, enable a paid tier or deploy without the relevant checks. NeoHeberg is excluded because its free VPS has no outbound IPv4 NAT.
+As of 2 November 2026, no provider is approved as a reliable, unattended, permanent €0/month VPN exit node.
+
+- **switched.cloud** is the best documented short-test candidate: its current Terms explicitly allow personal VPNs and tunnels; the French host exposes UDP-forwarded ports and a public IPv6 address. However, the user previously could not provision a slot, the public status page has not begun reporting host data, ongoing runtime is earned through Linkvertise Cloud Tokens, there are no backups, and there is no SLA. It is not a permanent unattended solution.
+- **FOSSVPS (Frankfurt)** has the strongest published resources, but eligibility requires an established LowEndTalk/LowEndSpirit reputation, an appropriately licensed open-source project, and written confirmation of WireGuard/UDP support. FreeRoute does not yet have an overall project license, and those eligibility details are not verified.
+- **Openworld** offers no-card access, root SSH, NAT IPv4 and public IPv6, but free instances must be renewed manually every 24 hours. WireGuard/TUN permissions and UDP reachability still need written confirmation.
+- **GratisVPS** advertises a free KVM instance, but its own terms describe an "As-Is" beta and permit termination without notice; it is excluded for personal VPN traffic.
+- **TheUltraHost** remains conditional on real student eligibility and binding terms; do not add a payment card or paid tier. **Oracle Cloud remains excluded** because it was already unsuccessful in this setup.
+
+Do not automate ad-link completion, bypass provider renewal controls, create duplicate accounts, or rely on public VPN/proxy lists. A short technical prototype is not the same as a stable exit service.
 
 ## Candidates reviewed
 
