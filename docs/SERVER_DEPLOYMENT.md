@@ -60,6 +60,8 @@ Only after the preflight passes and external UDP forwarding has been confirmed:
 
 Before SSH deployment, the workflow queries the free HTTPS geolocation endpoint `ipwho.is` for the provided public endpoint and refuses deployment if the reported country is Russia or the API cannot return a valid matching IP/country. This is a best-effort database lookup, not cryptographic proof of the server's location. Cross-check the provider's region and verify the actual exit IP from a connected client. This lookup sends the already-public endpoint IP to that third-party API; see [its documentation](https://ipwhois.io/ru/documentation).
 
+The endpoint address is only the address clients dial. After deployment, the Diagnose workflow separately checks the server's **actual outbound IPv4 egress address** from the server itself. This catches NAT or provider routing where the incoming endpoint's country differs from the country used by outbound internet traffic.
+
 The installer:
 - Refuses to proceed without a valid explicit public IPv4 or IPv6 endpoint and valid port.
 - Refuses to overwrite an existing `/etc/wireguard/wg0.conf` unless it carries the FreeRoute managed marker and contains exactly the three managed `windows`, `android` and `iphone` peers. It refuses to replace a managed config containing custom peers.
