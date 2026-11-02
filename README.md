@@ -25,7 +25,8 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
 - [ ] Sign and install the iOS app with an Apple developer team that has the required Network Extension entitlement.
 - [ ] Find a sustainable, genuinely free VPN exit node outside Russia.
-- [ ] Generate each device's private key locally and assemble its profile in the client; connect the current manual registration workflow to the Android UX.
+- [x] Android generates the WireGuard key pair locally, protects the pending private key with Android Keystore, and assembles a local `.conf` from server-registration metadata.
+- [ ] Add one-tap registration and peer revocation, then bring the same local-enrollment flow to Windows and iPhone.
 - [ ] Deploy a server and verify public IP, DNS and IPv6 behavior.
 - [ ] Verify end-to-end country switching on all clients.
 
@@ -35,7 +36,7 @@ Latest repository validation (34 endpoint-validation cases, firewall-policy, dep
 
 ## Android client
 
-Source: `app/`. FreeRoute has its own native UI, local profile picker, profile import, connect/disconnect flow, and an IPv6-route warning. It embeds WireGuard's tunnel engine as a library; it does not require the user to install a separate WireGuard consumer app. Imported profiles stay in the app's private storage and are not uploaded to GitHub.
+Source: `app/`. FreeRoute has its own native UI, local profile picker, profile import, connect/disconnect flow, and an IPv6-route warning. The Add Profile dialog also includes a FreeRoute enrollment flow: it generates the device key pair locally, encrypts the pending private key with Android Keystore, sends only the public key through a manual GitHub Actions registration, and assembles the `.conf` on the phone after the user pastes the returned `REGISTRATION_JSON`. It embeds WireGuard's tunnel engine as a library and does not require a separate VPN consumer app. Client private keys and completed profiles remain in the app-private storage; they are not uploaded to GitHub.
 
 A debug APK has been built successfully. You can download it from [this verified build artifact](https://github.com/arturwarlord/VPN/actions/runs/40954784618) or use [Build FreeRoute Android APK](https://github.com/arturwarlord/VPN/actions/workflows/android-client.yml).
 
