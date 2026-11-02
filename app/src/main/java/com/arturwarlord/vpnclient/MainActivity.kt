@@ -66,7 +66,6 @@ class MainActivity : Activity() {
     private lateinit var connectButton: Button
     private lateinit var disconnectButton: Button
     private lateinit var checkCountryButton: Button
-    private lateinit var openVpnCoreButton: Button
     private lateinit var openVpnProfileStatusView: TextView
 
     private data class SavedProfile(
@@ -170,26 +169,8 @@ class MainActivity : Activity() {
         root.addView(profileSpinner, matchWidthWrapHeight())
 
         importButton = makeButton("Добавить профиль", Color.rgb(47, 88, 158))
-        importButton.setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "*/*"
-            }
-            @Suppress("DEPRECATION")
-            startActivityForResult(intent, pickProfileRequest)
-        }
+        importButton.setOnClickListener { showProfileImportChoices() }
         root.addView(importButton, buttonLayout())
-
-        val importOpenVpnButton = makeButton("Импортировать профиль OpenVPN (.ovpn)", Color.rgb(92, 75, 130))
-        importOpenVpnButton.setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "*/*"
-            }
-            @Suppress("DEPRECATION")
-            startActivityForResult(intent, pickOpenVpnProfileRequest)
-        }
-        root.addView(importOpenVpnButton, buttonLayout())
 
         openVpnProfileStatusView = TextView(this).apply {
             textSize = 12f
@@ -212,21 +193,6 @@ class MainActivity : Activity() {
         checkCountryButton.setOnClickListener { checkExitCountry() }
         root.addView(checkCountryButton, buttonLayout())
 
-        openVpnCoreButton = makeButton("Диагностика OpenVPN Core", Color.rgb(70, 85, 120))
-        openVpnCoreButton.setOnClickListener { diagnoseOpenVpnCore() }
-        root.addView(openVpnCoreButton, buttonLayout())
-
-        val openVpnServiceTestButton = makeButton(
-            "Тест службы OpenVPN (без подключения)",
-            Color.rgb(92, 75, 130)
-        )
-        openVpnServiceTestButton.setOnClickListener { requestOpenVpnServiceSmokeTest() }
-        root.addView(openVpnServiceTestButton, buttonLayout())
-
-        val licensesButton = makeButton("О лицензиях", Color.rgb(36, 48, 71))
-        licensesButton.setOnClickListener { showLicenses() }
-        root.addView(licensesButton, buttonLayout())
-
         val note = TextView(this).apply {
             text = "Каждый профиль хранится только на этом устройстве. Имя профиля не подтверждает страну выхода. Проверка по кнопке отправляет текущий публичный IP сервису ipwho.is; результат приблизительный и не сохраняется."
             textSize = 12f
@@ -236,6 +202,22 @@ class MainActivity : Activity() {
         }
         root.addView(note, matchWidthWrapHeight())
         setContentView(root)
+    }
+
+    private fun showProfileImportChoices() {
+        AlertDialog.Builder(this)
+            .setTitle("Добавить профиль")
+            .setItems(arrayOf("WireGuard (.conf)", "OpenVPN (.ovpn)")) { _, choice ->
+                val request = if (choice == 0) pickProfileRequest else pickOpenVpnProfileRequest
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                @Suppress("DEPRECATION")
+                startActivityForResult(intent, request)
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun loadSavedProfiles(preferredFileName: String? = null) {
@@ -767,7 +749,6 @@ class MainActivity : Activity() {
         connectButton.isEnabled = profile != null && canEdit
         disconnectButton.isEnabled = isConnected && !isBusy
         checkCountryButton.isEnabled = isConnected && hasHandshakeForCurrentSession && !isBusy && !isCheckingExit
-        openVpnCoreButton.isEnabled = !isOpenVpnCoreCheckRunning
     }
 
     private fun showLicenses() {
