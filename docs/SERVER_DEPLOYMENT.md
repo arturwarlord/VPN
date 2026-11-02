@@ -85,6 +85,21 @@ Open **Actions → Diagnose WireGuard server → Run workflow** after deployment
 
 It prints counts and status only; it does not print any private keys or client profile contents. The check cannot verify the provider's external firewall, whether the client has connected, or whether a public-IP/geolocation lookup returns the expected country.
 
+## Register a device using only its public key
+
+After a FreeRoute server has been deployed and the four pinned-SSH repository secrets are configured, additional devices can be registered without generating or transferring their private keys on the server.
+
+1. Generate a WireGuard key pair on the client device. Keep the private key in that device's protected local storage. Only the public key is sent to GitHub Actions.
+2. Open **Actions → Register FreeRoute WireGuard device → Run workflow**.
+3. Enter a unique lowercase device label (for example, `poco-x4`), the device's public key, the server's public endpoint IP, the externally reachable UDP port, and the provider's SSH port.
+4. The workflow verifies the public key and address, rejects endpoints geolocating to Russia, verifies the pinned SSH host identity, and sends only the public key to the server.
+5. The server allocates the first unused IPv4/IPv6 address pair, applies the peer to the running interface, and atomically persists the managed configuration. A lock prevents two registrations from allocating the same address.
+6. The workflow prints safe metadata: assigned client addresses, server public key and endpoint. The client profile is assembled locally from this metadata and the private key that never left the device.
+
+The registration script refuses unmanaged configurations, duplicate public keys, duplicate device labels, invalid labels, invalid address entries and exhausted address pools. If the live WireGuard update succeeds but the persistent config cannot be replaced, it removes the newly added runtime peer. The workflow never uploads a client private key or a complete client profile.
+
+**Current limitation:** this is the first server-side registration milestone. The Android app does not yet generate the device key pair or assemble this profile automatically. Do not run this workflow until a server is deployed and a device-side key-generation flow is available. Client registration/revocation from the app and a full control API are later stages.
+
 ## Test from a client
 
 After transferring one profile through an authenticated private channel:
