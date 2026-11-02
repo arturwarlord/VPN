@@ -238,3 +238,22 @@ Before deploying, verify all of the following using provider documentation or an
 8. Understand the operator's access, automated abuse scanning, retention and backup policies; do not route sensitive traffic through an experimental host.
 
 Until a candidate passes the checklist, keep the service marked **not live**, don't create a server, and don't claim that country switching works.
+
+### GratisVPS.net — excluded after trust and contract review (2 November 2026)
+
+The current landing page advertises a no-card KVM offer in Frankfurt with root SSH, 2 vCPU, 2 GB RAM, shared IPv4 and a dedicated IPv6 address. This initially looks technically interesting for a low-cost prototype, but it is not approved for FreeRoute:
+
+- Its own Terms of Service (last modified 24 April 2026) call the service an **"As-Is" beta testing/development environment**, provide no high-availability guarantee, and reserve the right to suspend or terminate the free tier at any time without notice or liability.
+- The published free plan has **shared IPv4**, not a dedicated IPv4. An IPv6-only outer WireGuard endpoint would require the user's Wi-Fi/mobile networks to have working IPv6; inbound UDP reachability and the provider's VPN-use policy are not explicitly confirmed.
+- The terms' AUP does not explicitly list private VPN use as prohibited, but the provider also does not explicitly confirm a private WireGuard tunnel as an allowed use.
+- Trustpilot showed 18 reviews and a 1.8/5 score at the time of review, with most visible reviews negative. These are user reports and are not proof that every activation fails, but they are a significant warning signal.
+- A separate recent review reports inconsistent claims and failed activation experiences; this is secondary evidence, not proof of wrongdoing.
+
+**Decision:** do not submit identity/payment information, rely on this provider for VPN traffic, or treat the advertised allocation as guaranteed. Reconsider only after the operator's identity and support channel are independently verified and it confirms in writing that the exact free Frankfurt KVM plan supports a private authenticated WireGuard server, inbound UDP over the assigned IP, and no card, top-up, automatic paid conversion or time-limited trial.
+
+References:
+- Official free plan and network details: https://gratisvps.net/
+- Official Linux VPS page: https://gratisvps.net/free-linux-vps.html
+- Official Terms of Service: https://gratisvps.net/terms.html
+- Independent Trustpilot user feedback: https://www.trustpilot.com/review/gratisvps.net
+- Independent review (29 September 2026): https://geekchamp.com/gratisvps-review-is-its-free-vps-reliable-or-safe-to-use/
