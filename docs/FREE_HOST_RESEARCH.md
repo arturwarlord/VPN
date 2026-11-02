@@ -199,6 +199,21 @@ The current Terms of Service prohibit operating open proxies or VPNs for malicio
 
 Treat Openworld only as a disposable, non-sensitive technical prototype, not a permanent VPN service. Its no-card price meets the €0 constraint, but experimental capacity, performance limits, weekly transfer cap and manual renewal make it unsuitable as the planned unattended exit node. Do not bypass renewal controls or use paid upgrades.
 
+#### Copy-ready support request (before creating a VPN instance)
+
+```text
+Hello. I am building a private, non-public WireGuard VPN for my own devices only. It will not be an open proxy, public VPN, resale service or malicious-use platform.
+
+Could you please confirm:
+1. Is a private personal WireGuard VPN allowed under your current Terms of Service?
+2. Are inbound UDP packets allowed on the VPS's dedicated public IPv6 address (for example UDP port 51820)?
+3. Does the container have /dev/net/tun, effective CAP_NET_ADMIN, access to the host WireGuard kernel module, and permission to manage iptables/ip6tables and IPv4 forwarding/NAT?
+4. Is the NAT IPv4 internet egress usable for ordinary personal browsing, and is there any country restriction or bandwidth policy beyond the published weekly quota?
+5. Which node locations can a free user select, and can the actual public IPv6 endpoint and outbound IPv4 egress country be confirmed before provisioning?
+
+I will only use a private tunnel for my own devices and will not expose an open proxy. Thank you.
+```
+
 References:
 - Official FAQ: https://openworld.eu.org/faq
 - Official Terms of Service (last updated 25 July 2026): https://openworld.eu.org/tos
