@@ -35,6 +35,7 @@ def _parse_peer_block(lines: list[str], start: int, end: int) -> tuple[str, list
     public_keys: list[str] = []
     allowed_ips: list[str] = []
     marker_found = False
+    device_markers = 0
     for raw_line in lines[start + 1:end]:
         line = raw_line.strip()
         if not line:
@@ -42,6 +43,7 @@ def _parse_peer_block(lines: list[str], start: int, end: int) -> tuple[str, list
         if line.startswith("#"):
             if line.startswith("# freeroute-device: "):
                 marker_found = True
+                device_markers += 1
             continue
         if "=" not in line:
             continue
@@ -56,6 +58,8 @@ def _parse_peer_block(lines: list[str], start: int, end: int) -> tuple[str, list
                 except ValueError as exc:
                     raise ValueError("The target peer has an invalid AllowedIPs entry.") from exc
                 allowed_ips.append(str(network))
+    if device_markers != 1:
+        raise ValueError("The target peer must contain exactly one FreeRoute device marker.")
     if len(public_keys) != 1 or not allowed_ips:
         raise ValueError("The target peer must contain exactly one PublicKey and at least one AllowedIPs entry.")
     return public_keys[0], allowed_ips, marker_found
@@ -97,8 +101,10 @@ def build_revoked_config(config_text: str, device_name: str) -> tuple[str, str, 
 
     if target_marker_count != len(matches):
         raise ValueError("The configuration contains a duplicate or malformed marker for this device.")
-    if len(matches) != 1:
-        raise ValueError("No uniquely registered FreeRoute device with this name was found.")
+    if len(matches) > 1:
+        raise ValueError("Duplicate FreeRoute device labels were found; refusing to revoke an ambiguous peer.")
+    if len(matches) == 0:
+        raise ValueError("No registered FreeRoute device with this name was found.")
 
     start, end, public_key, allowed_ips = matches[0]
     if len(set(allowed_ips)) != len(allowed_ips):
