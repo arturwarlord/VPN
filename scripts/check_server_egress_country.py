@@ -20,7 +20,7 @@ REQUEST_TIMEOUT_SECONDS = 10
 
 def _read_text(url: str, opener: Callable = urlopen) -> str:
     with opener(url, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-        return response.read().decode("ascii").strip()
+        return response.read().decode("utf-8").strip()
 
 
 def _validate_geo_response(public_ip: str, payload: object) -> tuple[str, str]:
