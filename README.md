@@ -32,7 +32,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 The VPN service is **not live yet**. No server has been provisioned or deployed. The country websites see is determined by the remote server's network location, not by a label in the app.
 
-Latest repository validation (34 endpoint-validation cases, firewall-policy, deployment-safety and IPv6 fail-closed regression tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
+Latest repository validation (34 endpoint-validation cases, 9 WireGuard peer-registration unit tests, firewall-policy, deployment-safety and IPv6 fail-closed regression tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
 
 ## Android client
 
