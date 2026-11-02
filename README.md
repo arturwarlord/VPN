@@ -13,7 +13,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [x] 34 automated endpoint-validation cases for IPv4/IPv6 publicness, special-purpose addresses, canonical formatting and UDP ports.
 - [x] Manual GitHub Actions server-deployment workflow with verified SSH host-key pinning.
 - [x] Server-side WireGuard peer-registration primitive: accepts only a device public key, allocates an unused address pair and never receives the device private key.
-- [x] Read-only server diagnostics that do not print private client profiles.
+- [x] Read-only server diagnostics that do not print private client profiles and fail closed if the server's actual outbound IPv4 geolocates to Russia or cannot be verified.
 - [x] Native Android client with local multi-profile management, connect/disconnect controls, an IPv6-route warning, and remote WireGuard-handshake status (the UI no longer treats a locally active interface as proof that the server answered).
 - [x] Android debug APK built successfully by GitHub Actions.
 - [x] Custom Windows client source and successful Windows x64 package build.
@@ -33,7 +33,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 
 The VPN service is **not live yet**. No server has been provisioned or deployed. The country websites see is determined by the remote server's network location, not by a label in the app.
 
-Latest repository validation (34 endpoint-validation cases, 10 WireGuard peer-registration and 8 peer-revocation unit tests, firewall-policy, deployment-safety and IPv6 fail-closed regression tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
+Latest repository validation (34 endpoint-validation cases, 10 WireGuard peer-registration, 8 peer-revocation and 7 actual-egress-country unit tests, firewall-policy, deployment-safety and IPv6 fail-closed regression tests): [GitHub Actions CI workflow](https://github.com/arturwarlord/VPN/actions/workflows/ci.yml).
 
 ## Android client
 
@@ -87,7 +87,7 @@ The deploy workflow deliberately does **not** trust a fresh `ssh-keyscan` result
 
 The workflow validates the endpoint as a globally routable IPv4 or IPv6 address outside Russia, checks non-interactive SSH sudo access, and installs WireGuard. The server must still have a working IPv4 default route/NAT for IPv4 egress, and the provider firewall must allow the configured UDP port (default 51820) on the endpoint's IP family. IPv6-only internet egress is not enabled yet. Do not run the workflow before the host, SSH access and firewall have been verified.
 
-After deployment, use **Actions → Diagnose WireGuard server → Run workflow**. The read-only workflow checks service status, boot enablement, forwarding, config permissions and the three generated client profiles. It intentionally does not print profile contents or private keys. A successful server diagnostic still cannot prove the UDP port is reachable from every network or that a client has completed a handshake.
+After deployment, use **Actions → Diagnose WireGuard server → Run workflow**. The read-only workflow checks service status, boot enablement, forwarding, config permissions, the three generated client profiles and the server's actual outbound IPv4 country. It fails closed on an unverified lookup or a Russian exit IP, and does not print the public IP, profile contents or private keys. A successful server diagnostic still cannot prove the UDP port is reachable from every network or that a client has completed a handshake.
 
 See [server deployment and security notes](docs/SERVER_DEPLOYMENT.md).
 
@@ -123,6 +123,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `docs/UZBEKISTAN_PROVIDER_SUPPORT_QUESTIONS.md` — copy-ready Russian/English questions for UNICON and ServerPlus support.
 - `docs/CLIENT_SMOKE_TEST.md` — safe temporary third-party WireGuard profile test before our own server exists.
 - `scripts/setup-wireguard.sh` — server bootstrap script.
+- `scripts/check_server_egress_country.py` — fail-closed check of the actual server outbound IPv4 country.
 - `scripts/register_wireguard_peer.py` and `.github/workflows/register-wireguard-device.yml` — public-key-only device registration.
 - `scripts/revoke_wireguard_peer.py` and `.github/workflows/revoke-wireguard-device.yml` — remove a named FreeRoute peer from the live WireGuard interface and persistent configuration.
 - `.github/workflows/android-client.yml` — Android debug APK build.
@@ -130,4 +131,4 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `.github/workflows/ios-client.yml` — unsigned iOS build.
 - `.github/workflows/ci.yml` — syntax, required-file, shell-step, endpoint-validation and secret-material checks.
 - `.github/workflows/deploy.yml` — manual server deployment over pinned SSH.
-- `.github/workflows/diagnose-server.yml` — read-only server diagnosis.
+- `.github/workflows/diagnose-server.yml` — read-only server diagnosis, including actual IPv4 egress-country verification.

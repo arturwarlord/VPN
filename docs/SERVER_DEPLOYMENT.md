@@ -60,6 +60,8 @@ Only after the preflight passes and external UDP forwarding has been confirmed:
 
 Before SSH deployment, the workflow queries the free HTTPS geolocation endpoint `ipwho.is` for the provided public endpoint and refuses deployment if the reported country is Russia or the API cannot return a valid matching IP/country. This is a best-effort database lookup, not cryptographic proof of the server's location. Cross-check the provider's region and verify the actual exit IP from a connected client. This lookup sends the already-public endpoint IP to that third-party API; see [its documentation](https://ipwhois.io/ru/documentation).
 
+The endpoint address is only the address clients dial. After deployment, the Diagnose workflow separately checks the server's **actual outbound IPv4 egress address** from the server itself. This catches NAT or provider routing where the incoming endpoint's country differs from the country used by outbound internet traffic.
+
 The installer:
 - Refuses to proceed without a valid explicit public IPv4 or IPv6 endpoint and valid port.
 - Refuses to overwrite an existing `/etc/wireguard/wg0.conf` unless it carries the FreeRoute managed marker and contains exactly the three managed `windows`, `android` and `iphone` peers. It refuses to replace a managed config containing custom peers.
@@ -82,8 +84,11 @@ Open **Actions → Diagnose WireGuard server → Run workflow** after deployment
 - The first `INPUT` rule drops all traffic arriving from `wg0`, preventing VPN clients from reaching services on the VPS itself.
 - The chain blocks known private and special-purpose IPv4 destinations and forwards client traffic only out through the detected WAN interface.
 - Windows, Android and iPhone profiles exist with permissions 600 and no placeholder endpoint.
+- The server's actual outbound IPv4 address is identified and geolocated; the diagnostic fails closed if the lookup fails, does not match the address, or reports Russia.
 
-It prints counts and status only; it does not print any private keys or client profile contents. The check cannot verify the provider's external firewall, whether the client has connected, or whether a public-IP/geolocation lookup returns the expected country.
+The country check runs from the server itself. It requests the public IPv4 from `api.ipify.org` and sends that address to `ipwho.is` for a country estimate. The public IP is not printed or stored by the workflow, but both services receive it. The check prints only the country and country code. IP geolocation is an estimate, not a guarantee of how every website classifies the address.
+
+The diagnostic does not print private keys or client profile contents. It still cannot verify the provider's external UDP firewall, whether the client has completed a handshake, or whether client DNS/IPv6 traffic leaks outside the tunnel.
 
 ## Register a device using only its public key
 

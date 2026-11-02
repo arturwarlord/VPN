@@ -9,7 +9,7 @@ As of 2 November 2026, no provider is approved as a reliable, unattended, perman
 
 - **switched.cloud** is the best documented short-test candidate: its current Terms explicitly allow personal VPNs and tunnels; the French host exposes UDP-forwarded ports and a public IPv6 address. However, the user previously could not provision a slot, the public status page has not begun reporting host data, ongoing runtime is earned through Linkvertise Cloud Tokens, there are no backups, and there is no SLA. It is not a permanent unattended solution.
 - **FOSSVPS (Frankfurt)** has the strongest published resources, but eligibility requires an established LowEndTalk/LowEndSpirit reputation, an appropriately licensed open-source project, and written confirmation of WireGuard/UDP support. FreeRoute does not yet have an overall project license, and those eligibility details are not verified.
-- **Openworld** offers no-card access, root SSH, NAT IPv4 and public IPv6, but free instances must be renewed manually every 24 hours. WireGuard/TUN permissions and UDP reachability still need written confirmation.
+- **Openworld** offers no-card access, root SSH, NAT IPv4 and public IPv6. The official FAQ says each free period lasts seven days and may be renewed once per 24 hours (the renewal is manual); the service is therefore not unattended. A community offer lists only 512 MiB RAM, 5 GB disk, a 50 GB/week quota and Honduras as the location, while a sample benchmark showed a US exit IP; region and actual exit country must be checked on the allocated instance. WireGuard/TUN permissions and UDP reachability are unconfirmed.
 - **GratisVPS** advertises a free KVM instance, but its own terms describe an "As-Is" beta and permit termination without notice; it is excluded for personal VPN traffic.
 - **TheUltraHost** remains conditional on real student eligibility and binding terms; do not add a payment card or paid tier. **Oracle Cloud remains excluded** because it was already unsuccessful in this setup.
 
@@ -187,20 +187,38 @@ Official/provider references:
 - Service and network details (LowEndTalk): https://lowendtalk.com/discussion/215848/fossvps-updates-free-server-for-open-source-developers-from-alexhost-hosteroid-and-st-hosting
 - Application form: https://fossvps.org/dev/form1.html
 
-### Openworld — next conditional candidate for a one-device prototype
+### Openworld — conditional candidate for a disposable one-device prototype only
 
-The current official FAQ documents no-card free access, NAT IPv4, a dedicated public IPv6 address, root SSH access, and containers with full systemd access. Free VPS periods last seven days and can be renewed once every 24 hours; an unrenewed VPS is suspended. The main page reports three nodes and 145 VPS instances in total, but those aggregate counts do not prove that a free slot is available.
+The official FAQ confirms free access without a payment card, root SSH, a dedicated public IPv6 address, NAT IPv4, and containers with full systemd access. It says a free VPS period lasts seven days and the user may renew it once every 24 hours to reset the countdown; an unrenewed instance is auto-suspended. This means a manual renewal is needed before the seven-day period expires, not every day. The main page currently reports three nodes and 145 VPS instances, but these aggregate counts do not show which locations have free capacity. The homepage says login requires Discord.
 
-The terms prohibit open proxies or VPNs for malicious purposes; they do not explicitly ban a private VPN for the owner's own devices. Still, get written confirmation that a private, non-public WireGuard tunnel is permitted and that UDP listening on the dedicated IPv6 address is supported.
+The provider's August 2026 public offer describes a small experimental hobby service with no uptime/support guarantees. It lists 1 vCore, 512 MiB RAM, 5 GB storage, a public IPv6 address, NAT IPv4, a 50 GB/week traffic allowance and throttling to 1 Mbps after that limit. It also describes CPU throttling after sustained use and deep-packet inspection. The offer labels the location Honduras, while one sample benchmark in that same thread reported an IPv6 address geolocating to Ashburn, US. These are not reliable proof of the country assigned to a new instance; the actual public egress must be checked from the provisioned VPS. Available capacity may be limited.
 
-**Technical gate:** full systemd access does not prove that a container has /dev/net/tun, effective CAP_NET_ADMIN, WireGuard kernel support, iptables/ip6tables permissions or host-network forwarding. Run the read-only FreeRoute preflight before installation. FreeRoute would use public IPv6 for the outer WireGuard UDP endpoint and NAT IPv4 for ordinary IPv4 internet egress. The client networks must also have working IPv6. Check this on the POCO's actual Wi-Fi and mobile networks. Confirm UDP reachability and exit-IP geolocation before generating client profiles.
+The current Terms of Service prohibit operating open proxies or VPNs for malicious purposes; they do not explicitly say whether a private WireGuard tunnel for the account owner's own devices is permitted. Obtain written confirmation that a private, non-public personal WireGuard VPN is allowed and that inbound UDP on the public IPv6 address is supported before proceeding. Do not expose an open proxy.
 
-The daily renewal requirement is not unattended. Treat this only as a short, non-sensitive prototype unless a stable no-cost renewal process can be used with the provider's permission. Do not bypass provider controls or use paid upgrades.
+**Technical gate:** full systemd access does not prove that an LXC/container has /dev/net/tun, effective CAP_NET_ADMIN, WireGuard kernel support, iptables/ip6tables permissions or permission to manage forwarding/NAT. Run the read-only FreeRoute preflight before installation. The intended design would use public IPv6 for the outer WireGuard UDP endpoint and NAT IPv4 for ordinary IPv4 internet egress. The POCO's current Wi-Fi/mobile networks must also reach the server over IPv6. The new Diagnose workflow checks the instance's actual outbound IPv4 country and fails closed if it is Russia or cannot be verified.
 
-Official references:
-- FAQ: https://openworld.eu.org/faq
-- Terms of Service (last updated 25 July 2026): https://openworld.eu.org/tos
-- Main page and aggregate VPS counts: https://openworld.eu.org/
+Treat Openworld only as a disposable, non-sensitive technical prototype, not a permanent VPN service. Its no-card price meets the €0 constraint, but experimental capacity, performance limits, weekly transfer cap and manual renewal make it unsuitable as the planned unattended exit node. Do not bypass renewal controls or use paid upgrades.
+
+#### Copy-ready support request (before creating a VPN instance)
+
+```text
+Hello. I am building a private, non-public WireGuard VPN for my own devices only. It will not be an open proxy, public VPN, resale service or malicious-use platform.
+
+Could you please confirm:
+1. Is a private personal WireGuard VPN allowed under your current Terms of Service?
+2. Are inbound UDP packets allowed on the VPS's dedicated public IPv6 address (for example UDP port 51820)?
+3. Does the container have /dev/net/tun, effective CAP_NET_ADMIN, access to the host WireGuard kernel module, and permission to manage iptables/ip6tables and IPv4 forwarding/NAT?
+4. Is the NAT IPv4 internet egress usable for ordinary personal browsing, and is there any country restriction or bandwidth policy beyond the published weekly quota?
+5. Which node locations can a free user select, and can the actual public IPv6 endpoint and outbound IPv4 egress country be confirmed before provisioning?
+
+I will only use a private tunnel for my own devices and will not expose an open proxy. Thank you.
+```
+
+References:
+- Official FAQ: https://openworld.eu.org/faq
+- Official Terms of Service (last updated 25 July 2026): https://openworld.eu.org/tos
+- Official homepage / aggregate node count and Discord login: https://openworld.eu.org/
+- Public offer, resource limits, stated Honduras location, sample US benchmark, Discord login, manual renewal and limited availability: https://lowendtalk.com/discussion/220420/free-openworld-eu-org-free-ipv6-vps
 
 
 
