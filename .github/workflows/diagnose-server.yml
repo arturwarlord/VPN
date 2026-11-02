@@ -69,6 +69,24 @@ jobs:
             -o UpdateHostKeys=no \
             "$VPN_USER@$VPN_HOST" "$remote_command" < scripts/diagnose-wireguard-server.sh
 
+      - name: Verify actual server IPv4 egress country
+        env:
+          VPN_HOST: ${{ secrets.VPN_HOST }}
+          VPN_USER: ${{ secrets.VPN_USER }}
+          SSH_PORT: ${{ inputs.ssh_port }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This check runs on the server itself: it verifies the IPv4 address
+          # used for internet egress, not merely the VPN's incoming endpoint.
+          ssh -p "$SSH_PORT" -i "$RUNNER_TEMP/vpn_key" \\
+            -o BatchMode=yes \\
+            -o StrictHostKeyChecking=yes \\
+            -o UserKnownHostsFile="$RUNNER_TEMP/vpn_known_hosts" \\
+            -o GlobalKnownHostsFile=/dev/null \\
+            -o UpdateHostKeys=no \\
+            "$VPN_USER@$VPN_HOST" "python3 -" < scripts/check_server_egress_country.py
+
       - name: Remove temporary SSH material
         if: always()
         shell: bash
