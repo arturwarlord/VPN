@@ -12,6 +12,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [x] Server installer builds a restrictive IPv4 forwarding chain: internet-only egress, private/reserved-range filtering, and no access from VPN clients to services on the VPN host.
 - [x] 34 automated endpoint-validation cases for IPv4/IPv6 publicness, special-purpose addresses, canonical formatting and UDP ports.
 - [x] Manual GitHub Actions server-deployment workflow with verified SSH host-key pinning.
+- [x] Server-side WireGuard peer-registration primitive: accepts only a device public key, allocates an unused address pair and never receives the device private key.
 - [x] Read-only server diagnostics that do not print private client profiles.
 - [x] Native Android client with local multi-profile management, connect/disconnect controls, an IPv6-route warning, and remote WireGuard-handshake status (the UI no longer treats a locally active interface as proof that the server answered).
 - [x] Android debug APK built successfully by GitHub Actions.
@@ -24,6 +25,7 @@ We are building a custom VPN product for Android, Windows and iPhone. GitHub hos
 - [ ] Install/test Android and Windows clients on real devices with a valid server profile.
 - [ ] Sign and install the iOS app with an Apple developer team that has the required Network Extension entitlement.
 - [ ] Find a sustainable, genuinely free VPN exit node outside Russia.
+- [ ] Generate each device's private key locally and assemble its profile in the client; connect the current manual registration workflow to the Android UX.
 - [ ] Deploy a server and verify public IP, DNS and IPv6 behavior.
 - [ ] Verify end-to-end country switching on all clients.
 
@@ -119,6 +121,7 @@ The installer stores generated profiles on the server under `/root/wireguard-cli
 - `docs/UZBEKISTAN_PROVIDER_SUPPORT_QUESTIONS.md` — copy-ready Russian/English questions for UNICON and ServerPlus support.
 - `docs/CLIENT_SMOKE_TEST.md` — safe temporary third-party WireGuard profile test before our own server exists.
 - `scripts/setup-wireguard.sh` — server bootstrap script.
+- `scripts/register_wireguard_peer.py` and `.github/workflows/register-wireguard-device.yml` — public-key-only device registration; app-side key generation/profile assembly is not implemented yet.
 - `.github/workflows/android-client.yml` — Android debug APK build.
 - `.github/workflows/windows-client.yml` — Windows package build.
 - `.github/workflows/ios-client.yml` — unsigned iOS build.
