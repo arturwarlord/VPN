@@ -1,0 +1,138 @@
+name: Revoke FreeRoute WireGuard device
+
+on:
+  workflow_dispatch:
+    inputs:
+      device_name:
+        description: Exact registered device label to revoke (e.g. poco-x4)
+        required: true
+        type: string
+      ssh_port:
+        description: SSH port shown in the server provider panel
+        required: true
+        default: "22"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: freeroute-register-wireguard-device
+  cancel-in-progress: false
+
+jobs:
+  revoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out FreeRoute
+        uses: actions/checkout@v4
+
+      - name: Validate device label and SSH secrets
+        env:
+          DEVICE_NAME: ${{ inputs.device_name }}
+          SSH_PORT: ${{ inputs.ssh_port }}
+          VPN_HOST: ${{ secrets.VPN_HOST }}
+          VPN_USER: ${{ secrets.VPN_USER }}
+          VPN_SSH_KEY: ${{ secrets.VPN_SSH_KEY }}
+          VPN_KNOWN_HOSTS: ${{ secrets.VPN_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$VPN_HOST" && -n "$VPN_USER" && -n "$VPN_SSH_KEY" && -n "$VPN_KNOWN_HOSTS" ]] || {
+            echo "Configure the verified VPN_HOST, VPN_USER, VPN_SSH_KEY and VPN_KNOWN_HOSTS repository secrets first." >&2
+            exit 1
+          }
+          python3 - "$DEVICE_NAME" "$SSH_PORT" <<'PY'
+          import re
+          import sys
+          name, port_text = sys.argv[1:]
+          if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?", name):
+              raise SystemExit("device_name must be 1-32 lowercase letters, digits or hyphens.")
+          if name in {"windows", "android", "iphone"}:
+              raise SystemExit("Legacy peer names cannot be revoked by this workflow.")
+          if not re.fullmatch(r"[1-9][0-9]{0,4}", port_text) or not 1 <= int(port_text) <= 65535:
+              raise SystemExit("ssh_port must be a canonical integer from 1 to 65535.")
+          PY
+
+      - name: Prepare pinned SSH identity
+        env:
+          VPN_SSH_KEY: ${{ secrets.VPN_SSH_KEY }}
+          VPN_KNOWN_HOSTS: ${{ secrets.VPN_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$VPN_SSH_KEY" > "$RUNNER_TEMP/vpn_key"
+          chmod 600 "$RUNNER_TEMP/vpn_key"
+          printf '%s\n' "$VPN_KNOWN_HOSTS" > "$RUNNER_TEMP/vpn_known_hosts"
+          chmod 600 "$RUNNER_TEMP/vpn_known_hosts"
+          grep -qve '^[[:space:]]*$' "$RUNNER_TEMP/vpn_known_hosts" || {
+            echo "VPN_KNOWN_HOSTS must contain the server host key verified through the provider's trusted console." >&2
+            exit 1
+          }
+
+      - name: Verify pinned SSH access
+        env:
+          VPN_HOST: ${{ secrets.VPN_HOST }}
+          VPN_USER: ${{ secrets.VPN_USER }}
+          SSH_PORT: ${{ inputs.ssh_port }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$VPN_USER" == "root" ]]; then
+            remote_command="true"
+          else
+            remote_command="sudo -n true"
+          fi
+          ssh -p "$SSH_PORT" -i "$RUNNER_TEMP/vpn_key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/vpn_known_hosts" \
+            -o GlobalKnownHostsFile=/dev/null \
+            -o UpdateHostKeys=no \
+            "$VPN_USER@$VPN_HOST" "$remote_command"
+
+      - name: Remove device from WireGuard
+        env:
+          VPN_HOST: ${{ secrets.VPN_HOST }}
+          VPN_USER: ${{ secrets.VPN_USER }}
+          DEVICE_NAME: ${{ inputs.device_name }}
+          SSH_PORT: ${{ inputs.ssh_port }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$VPN_USER" == "root" ]]; then
+            remote_command="env WG_DEVICE_NAME='$DEVICE_NAME' python3 -"
+          else
+            remote_command="sudo -n env WG_DEVICE_NAME='$DEVICE_NAME' python3 -"
+          fi
+          result="$(ssh -p "$SSH_PORT" -i "$RUNNER_TEMP/vpn_key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/vpn_known_hosts" \
+            -o GlobalKnownHostsFile=/dev/null \
+            -o UpdateHostKeys=no \
+            "$VPN_USER@$VPN_HOST" "$remote_command" < scripts/revoke_wireguard_peer.py)"
+          python3 - "$result" <<'PY'
+          import json
+          import os
+          import sys
+          data = json.loads(sys.argv[1])
+          if data.get("revoked") is not True:
+              raise SystemExit("The remote server did not confirm peer revocation.")
+          print(f"Revoked device: {data['device_name']}")
+          print(f"Removed AllowedIPs entries: {data['removed_allowed_ip_count']}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write(
+                  "## FreeRoute device revoked\n"
+                  f"- Device: {data['device_name']}\n"
+                  f"- Removed AllowedIPs entries: {data['removed_allowed_ip_count']}\n"
+                  "- Runtime peer and persistent server config were both updated.\n"
+              )
+          PY
+
+      - name: Remove temporary SSH material
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/vpn_key" "$RUNNER_TEMP/vpn_known_hosts"
