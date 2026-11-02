@@ -45,7 +45,7 @@ class WireGuardPeerRevocationTests(unittest.TestCase):
         self.assertNotIn("# freeroute-device: tablet", updated)
 
     def test_refuses_unknown_device(self):
-        with self.assertRaisesRegex(ValueError, "No uniquely registered"):
+        with self.assertRaisesRegex(ValueError, "No registered"):
             MODULE.build_revoked_config(CONFIG, "not-registered")
 
     def test_rejects_duplicate_target_marker(self):
