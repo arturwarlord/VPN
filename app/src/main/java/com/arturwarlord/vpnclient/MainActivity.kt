@@ -46,7 +46,6 @@ class MainActivity : Activity() {
     private var isConnected = false
     private var isBusy = false
     private var isCheckingExit = false
-    private var isOpenVpnCoreCheckRunning = false
     private var connectionStartedAtEpochMillis = 0L
     private var hasHandshakeForCurrentSession = false
     private var isHandshakeCheckRunning = false
@@ -683,32 +682,6 @@ class MainActivity : Activity() {
                 AlertDialog.Builder(this)
                     .setTitle(title)
                     .setMessage(message)
-                    .setPositiveButton("Закрыть", null)
-                    .show()
-            }
-        }.start()
-    }
-
-    private fun diagnoseOpenVpnCore() {
-        if (isOpenVpnCoreCheckRunning) return
-
-        isOpenVpnCoreCheckRunning = true
-        openVpnCoreButton.isEnabled = false
-        Thread {
-            val result = try {
-                val platform = OpenVpn3SwigApi.platform()
-                "Java/SWIG ClientAPI OpenVPN 3 загружен.\\nПлатформа: $platform\\n\\nЭто проверка сгенерированного SWIG API и нативного ядра. Подключение OpenVPN, TUN-интерфейс, маршруты и DNS пока не реализованы."
-            } catch (error: Throwable) {
-                "Не удалось загрузить OpenVPN 3 Core.\\n\\nПричина: ${error.message ?: error.javaClass.simpleName}"
-            }
-
-            runOnUiThread {
-                isOpenVpnCoreCheckRunning = false
-                openVpnCoreButton.isEnabled = true
-                val loaded = result.startsWith("Java/SWIG ClientAPI OpenVPN 3 загружен")
-                AlertDialog.Builder(this)
-                    .setTitle(if (loaded) "OpenVPN Core готов к следующему этапу" else "Ошибка OpenVPN Core")
-                    .setMessage(result)
                     .setPositiveButton("Закрыть", null)
                     .show()
             }
