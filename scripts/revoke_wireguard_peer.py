@@ -83,19 +83,20 @@ def build_revoked_config(config_text: str, device_name: str) -> tuple[str, str, 
 
     marker = f"# freeroute-device: {device_name}"
     matches: list[tuple[int, int, str, list[str]]] = []
-    all_markers = 0
+    target_marker_count = 0
     for start, end in peer_blocks:
         block_text = "".join(lines[start:end])
-        all_markers += len(re.findall(r"(?m)^\s*# freeroute-device: [a-z0-9-]+\s*$", block_text))
-        if re.search(rf"(?m)^\s*{re.escape(marker)}\s*$", block_text):
+        target_marker_count += len(
+            re.findall(rf"(?m)^\\s*{re.escape(marker)}\\s*$", block_text)
+        )
+        if re.search(rf"(?m)^\\s*{re.escape(marker)}\\s*$", block_text):
             public_key, allowed_ips, marker_found = _parse_peer_block(lines, start, end)
             if not marker_found:
                 raise ValueError("The matching device marker could not be parsed.")
             matches.append((start, end, public_key, allowed_ips))
 
-    if all_markers != len(matches):
-        # A valid FreeRoute marker must be unique and correspond to one peer block.
-        raise ValueError("The configuration contains duplicate, malformed or misplaced FreeRoute device markers.")
+    if target_marker_count != len(matches):
+        raise ValueError("The configuration contains a duplicate or malformed marker for this device.")
     if len(matches) != 1:
         raise ValueError("No uniquely registered FreeRoute device with this name was found.")
 
