@@ -415,7 +415,7 @@ class MainActivity : Activity() {
             "AllowedIPs = 0.0.0.0/0, ::/0\n" +
             "PersistentKeepalive = 25\n"
 
-        val parsedConfig = Config.parse(ByteArrayInputStream(configText.toByteArray(Charsets.UTF_8)))
+        Config.parse(ByteArrayInputStream(configText.toByteArray(Charsets.UTF_8)))
         val profileName = "freeroute-" + pending.deviceName + ".conf"
         val newFile = uniqueProfileFile(profileName)
         newFile.writeText(configText, Charsets.UTF_8)
@@ -442,7 +442,7 @@ class MainActivity : Activity() {
         }
         val parts = host.split(".")
         require(parts.size == 4 && parts.all { part ->
-            part.matches(Regex("0|[1-9][0-9]{0,2}") ) && part.toIntOrNull() in 0..255
+            part.matches(Regex("0|[1-9][0-9]{0,2}")) && (part.toIntOrNull()?.let { it in 0..255 } == true)
         }) { "IPv4-адрес указан неверно." }
         val parsed = InetAddress.getByName(host)
         require(parsed is Inet4Address) { "Ожидался IPv4-адрес." }
